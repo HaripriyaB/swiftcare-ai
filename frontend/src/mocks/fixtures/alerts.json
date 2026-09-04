@@ -1,0 +1,78 @@
+{
+  "alerts": [
+    {
+      "alert_id": "alert-gap-1",
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "alert_type": "gap_in_care",
+      "severity": "MEDIUM",
+      "message": "Operational insight: data shows risk_flag=gap_in_care, risk_level=MEDIUM. Not a diagnosis or clinical order. Staff review required. Operational insight only.",
+      "dismissed": false,
+      "created_at": "2026-08-21T09:00:00Z"
+    },
+    {
+      "alert_id": "alert-util-1",
+      "patient_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001",
+      "alert_type": "high_utilizer",
+      "severity": "HIGH",
+      "message": "Operational insight: high visit volume in last 90 days. Not a diagnosis or clinical order. Staff review required. Operational insight only.",
+      "dismissed": false,
+      "created_at": "2026-08-21T09:05:00Z"
+    }
+  ],
+  "distribution": [
+    { "risk_flag": "gap_in_care", "risk_level": "MEDIUM", "patient_count": 42 },
+    { "risk_flag": "chronic_burden", "risk_level": "MEDIUM", "patient_count": 28 },
+    { "risk_flag": "high_utilizer", "risk_level": "HIGH", "patient_count": 9 },
+    { "risk_flag": "polypharmacy", "risk_level": "LOW", "patient_count": 15 }
+  ],
+  "atRisk": [
+    {
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "display_first_name": "Fannie",
+      "display_last_name": "Kuhn",
+      "age_years": 72,
+      "days_since_last_visit": 842,
+      "risk_flag": "gap_in_care",
+      "risk_level": "MEDIUM",
+      "encounters_last_90d": 0,
+      "active_condition_count": 2,
+      "active_med_count": 3
+    },
+    {
+      "patient_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001",
+      "display_first_name": "Harold",
+      "display_last_name": "Nguyen",
+      "age_years": 68,
+      "days_since_last_visit": 120,
+      "risk_flag": "high_utilizer",
+      "risk_level": "HIGH",
+      "encounters_last_90d": 8,
+      "active_condition_count": 3,
+      "active_med_count": 6
+    },
+    {
+      "patient_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0002",
+      "display_first_name": "Maya",
+      "display_last_name": "Patel",
+      "age_years": 55,
+      "days_since_last_visit": 400,
+      "risk_flag": "gap_in_care",
+      "risk_level": "MEDIUM",
+      "encounters_last_90d": 0,
+      "active_condition_count": 2,
+      "active_med_count": 2
+    },
+    {
+      "patient_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0003",
+      "display_first_name": "Luis",
+      "display_last_name": "Ortiz",
+      "age_years": 61,
+      "days_since_last_visit": 510,
+      "risk_flag": "gap_in_care",
+      "risk_level": "LOW",
+      "encounters_last_90d": 1,
+      "active_condition_count": 1,
+      "active_med_count": 4
+    }
+  ]
+}

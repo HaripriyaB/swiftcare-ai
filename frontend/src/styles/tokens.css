@@ -1,0 +1,20 @@
+:root {
+  --sc-bg: #f3efe8;
+  --sc-surface: #fffcf8;
+  --sc-surface-muted: #ebe4da;
+  --sc-ink: #2f2a26;
+  --sc-muted: #7a7168;
+  --sc-accent: #7d8f6e;
+  --sc-accent-soft: #dfe6d8;
+  --sc-border: #e0d7cc;
+  --sc-info: #8a7a68;
+  --sc-warn: #c4a574;
+  --sc-high: #b08989;
+  --sc-medium: #c4a574;
+  --sc-low: #8a9a7e;
+  --sc-font-sans: "Nunito Sans", "Segoe UI", sans-serif;
+  --sc-font-display: "Nunito", "Segoe UI", sans-serif;
+  --sc-radius: 10px;
+  --sc-space: 1.25rem;
+  --sc-shadow: 0 1px 2px rgba(47, 42, 38, 0.06);
+}

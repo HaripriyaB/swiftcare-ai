@@ -96,11 +96,20 @@ All clinical reads use **guarded, parameterized SQL** against allowlisted BigQue
 | 2 | Retrieval agent | Done |
 | 3 | Suggestion agent + advisory cards | Done |
 | 4 | Insights agent + insight alerts | Done |
-| 5 | Frontend | `<!-- TODO -->` |
+| 5 | Frontend | Done |
 | 6 | Orchestrate agents + deploy Cloud Run | `<!-- TODO -->` |
 | 7 | Full test, polish, demos, docs | `<!-- TODO -->` |
 
-Detailed build contracts: [`private_docs/`](private_docs/) (`final_chunk_1.md` … `final_chunk_4.md`, [`spec.md`](private_docs/spec.md)).
+Detailed build contracts: [`private_docs/`](private_docs/) (`final_chunk_1.md` … `final_chunk_5.md`, [`spec.md`](private_docs/spec.md)).
+
+### Frontend (Chunk 5)
+
+```bash
+./scripts/run_frontend.sh
+# or: cd frontend && cp .env.example .env && npm install && npm run dev
+```
+
+Opens http://127.0.0.1:5173 with MSW mocks (`VITE_AUTH_BYPASS=true`). Search **Kuhn**, open a patient, use Symptoms / Outcomes / Next steps tabs.
 
 ---
 

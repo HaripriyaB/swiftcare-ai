@@ -1,0 +1,90 @@
+[
+  {
+    "id": "doc-001",
+    "name": "Dr. Amara Okonkwo",
+    "specialty": "Internal Medicine",
+    "department": "Primary Care",
+    "clinic_hours": "Mon–Fri 08:00–16:00",
+    "languages": ["English", "Yoruba"],
+    "availability": "Available",
+    "phone": "ext. 4102",
+    "location": "Clinic Wing A, Rm 214"
+  },
+  {
+    "id": "doc-002",
+    "name": "Dr. James Chen",
+    "specialty": "Cardiology",
+    "department": "Heart & Vascular",
+    "clinic_hours": "Mon, Wed, Fri 09:00–17:00",
+    "languages": ["English", "Mandarin"],
+    "availability": "Limited",
+    "phone": "ext. 4220",
+    "location": "Pavilion C, Suite 300"
+  },
+  {
+    "id": "doc-003",
+    "name": "Dr. Priya Nair",
+    "specialty": "Pediatrics",
+    "department": "Children’s Health",
+    "clinic_hours": "Tue–Sat 08:30–15:30",
+    "languages": ["English", "Hindi", "Malayalam"],
+    "availability": "Available",
+    "phone": "ext. 4355",
+    "location": "Family Pavilion, Floor 2"
+  },
+  {
+    "id": "doc-004",
+    "name": "Dr. Elena Vargas",
+    "specialty": "Emergency Medicine",
+    "department": "Emergency",
+    "clinic_hours": "Rotating shifts",
+    "languages": ["English", "Spanish"],
+    "availability": "On shift",
+    "phone": "ext. 9110",
+    "location": "ED Bay Desk"
+  },
+  {
+    "id": "doc-005",
+    "name": "Dr. Michael Torres",
+    "specialty": "Orthopedics",
+    "department": "Musculoskeletal",
+    "clinic_hours": "Mon–Thu 07:30–15:00",
+    "languages": ["English", "Spanish"],
+    "availability": "Available",
+    "phone": "ext. 4488",
+    "location": "Sports Med, Rm 110"
+  },
+  {
+    "id": "doc-006",
+    "name": "Dr. Sarah Kim",
+    "specialty": "Dermatology",
+    "department": "Specialty Clinics",
+    "clinic_hours": "Wed–Fri 10:00–18:00",
+    "languages": ["English", "Korean"],
+    "availability": "Booked today",
+    "phone": "ext. 4560",
+    "location": "Outpatient Annex B"
+  },
+  {
+    "id": "doc-007",
+    "name": "Dr. Omar Hassan",
+    "specialty": "Neurology",
+    "department": "Neurosciences",
+    "clinic_hours": "Mon–Fri 09:00–16:30",
+    "languages": ["English", "Arabic"],
+    "availability": "Available",
+    "phone": "ext. 4612",
+    "location": "Neuro Tower, Floor 5"
+  },
+  {
+    "id": "doc-008",
+    "name": "Dr. Laura Bennett",
+    "specialty": "Obstetrics & Gynecology",
+    "department": "Women’s Health",
+    "clinic_hours": "Mon–Fri 08:00–15:00",
+    "languages": ["English", "French"],
+    "availability": "Limited",
+    "phone": "ext. 4701",
+    "location": "Maternity Wing, Suite 2"
+  }
+]

@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .env
+frontend/.env
+node_modules/
+frontend/node_modules/
 *.egg-info/
 dist/
 build/

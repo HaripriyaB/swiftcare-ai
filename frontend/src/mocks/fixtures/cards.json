@@ -1,0 +1,37 @@
+{
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001": [
+    {
+      "card_id": "card-allergy-1",
+      "session_id": null,
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "agent_type": "suggestion",
+      "content": {
+        "title": "Allergy awareness",
+        "body": "Penicillin on file — staff should be aware before scheduling procedures.",
+        "severity": "attention",
+        "card_type": "allergy_awareness",
+        "disclaimer": "Not a clinical order. Staff review required. Not a diagnosis or prescription."
+      },
+      "source_refs": [{ "view": "v_active_allergies", "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001", "fields": ["allergen"] }],
+      "dismissed": false,
+      "created_at": "2026-08-20T12:00:00Z"
+    },
+    {
+      "card_id": "card-followup-1",
+      "session_id": null,
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "agent_type": "suggestion",
+      "content": {
+        "title": "Follow-up scheduling",
+        "body": "Last visit was in 2019 — consider a scheduling review.",
+        "severity": "info",
+        "card_type": "follow_up_scheduling",
+        "disclaimer": "Not a clinical order. Staff review required. Not a diagnosis or prescription."
+      },
+      "source_refs": [{ "view": "v_visit_summary", "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001", "fields": ["last_visit_date"] }],
+      "dismissed": false,
+      "created_at": "2026-08-20T12:05:00Z"
+    }
+  ],
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002": []
+}

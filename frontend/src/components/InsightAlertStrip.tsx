@@ -1,0 +1,1 @@
+export { InsightAlertStrip } from './InsightAlert'

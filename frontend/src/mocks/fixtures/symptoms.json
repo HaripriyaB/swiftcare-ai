@@ -1,0 +1,39 @@
+{
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001": [
+    {
+      "symptom_id": "s1",
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "description": "Occasional dizziness when standing",
+      "reported_by": "patient",
+      "recorded_by_user_id": "dev-user",
+      "recorded_by_display": "dev-user@local",
+      "status": "active",
+      "recorded_at": "2026-08-01T14:00:00Z",
+      "resolved_at": null
+    },
+    {
+      "symptom_id": "s2",
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "description": "Mild ankle swelling noted at desk",
+      "reported_by": "staff",
+      "recorded_by_user_id": "dev-user",
+      "recorded_by_display": "dev-user@local",
+      "status": "active",
+      "recorded_at": "2026-08-15T10:30:00Z",
+      "resolved_at": null
+    }
+  ],
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002": [
+    {
+      "symptom_id": "s3",
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002",
+      "description": "Seasonal sneezing",
+      "reported_by": "patient",
+      "recorded_by_user_id": "dev-user",
+      "recorded_by_display": "dev-user@local",
+      "status": "active",
+      "recorded_at": "2026-04-02T09:00:00Z",
+      "resolved_at": null
+    }
+  ]
+}

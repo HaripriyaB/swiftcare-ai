@@ -1,0 +1,85 @@
+{
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001": {
+    "summary": {
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "display_first_name": "Fannie",
+      "display_last_name": "Kuhn",
+      "age_years": 72,
+      "gender": "female",
+      "city": "Boston",
+      "state": "MA",
+      "last_visit_date": "2019-06-12",
+      "is_deceased": false,
+      "active_conditions_count": 2,
+      "active_medications_count": 3,
+      "active_allergies_count": 1,
+      "total_encounters": 14
+    },
+    "medications": [
+      { "medication_id": "m1", "medication_name": "Lisinopril 10 MG", "prescribed_date": "2018-01-01", "status": "active" },
+      { "medication_id": "m2", "medication_name": "Metformin 500 MG", "prescribed_date": "2019-02-01", "status": "active" },
+      { "medication_id": "m3", "medication_name": "Atorvastatin 20 MG", "prescribed_date": "2020-05-01", "status": "active" }
+    ],
+    "allergies": [
+      { "allergy_id": "a1", "allergen": "Penicillin", "criticality": "high" }
+    ],
+    "visits": [
+      { "encounter_id": "e1", "visit_date": "2019-06-12", "encounter_class": "ambulatory", "visit_type": "Follow-up", "chief_complaint": "Blood pressure check", "status": "finished" },
+      { "encounter_id": "e2", "visit_date": "2018-11-03", "encounter_class": "ambulatory", "visit_type": "Office visit", "chief_complaint": "Medication review", "status": "finished" }
+    ],
+    "timeline": [
+      { "event_date": "2019-06-12", "event_type": "encounter", "event_label": "Follow-up visit", "source_id": "e1" },
+      { "event_date": "2019-02-01", "event_type": "medication", "event_label": "Metformin started", "source_id": "m2" },
+      { "event_date": "2018-01-01", "event_type": "condition", "event_label": "Essential hypertension", "source_id": "c1" }
+    ],
+    "vitals": {
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+      "systolic_bp": 138,
+      "diastolic_bp": 82,
+      "heart_rate": 74,
+      "respiratory_rate": 16,
+      "height_cm": 162,
+      "weight_kg": 68,
+      "bmi": 25.9,
+      "latest_observation_date": "2019-06-12"
+    }
+  },
+  "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002": {
+    "summary": {
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002",
+      "display_first_name": "Shanice",
+      "display_last_name": "Kuhn",
+      "age_years": 34,
+      "gender": "female",
+      "city": "Cambridge",
+      "state": "MA",
+      "last_visit_date": "2024-01-08",
+      "is_deceased": false,
+      "active_conditions_count": 1,
+      "active_medications_count": 1,
+      "active_allergies_count": 0,
+      "total_encounters": 6
+    },
+    "medications": [
+      { "medication_id": "m4", "medication_name": "Cetirizine 10 MG", "prescribed_date": "2023-04-01", "status": "active" }
+    ],
+    "allergies": [],
+    "visits": [
+      { "encounter_id": "e3", "visit_date": "2024-01-08", "encounter_class": "ambulatory", "visit_type": "Annual", "chief_complaint": "Wellness", "status": "finished" }
+    ],
+    "timeline": [
+      { "event_date": "2024-01-08", "event_type": "encounter", "event_label": "Annual visit", "source_id": "e3" }
+    ],
+    "vitals": {
+      "patient_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002",
+      "systolic_bp": 118,
+      "diastolic_bp": 72,
+      "heart_rate": 68,
+      "respiratory_rate": 14,
+      "height_cm": 168,
+      "weight_kg": 62,
+      "bmi": 22.0,
+      "latest_observation_date": "2024-01-08"
+    }
+  }
+}

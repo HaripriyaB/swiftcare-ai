@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ann-001",
+    "title": "Flu clinic hours extended",
+    "date": "2026-09-04",
+    "body": "Walk-in flu vaccination available weekdays 7:00–19:00 at Pavilion B through September 30. Staff may direct eligible patients without a scheduled visit.",
+    "priority": "high",
+    "source": "Dean’s Office"
+  },
+  {
+    "id": "ann-002",
+    "title": "Parking garage Level 2 closed Saturday",
+    "date": "2026-09-03",
+    "body": "Structural maintenance on Garage Level 2 this Saturday 06:00–14:00. Use East Lot shuttle or Garage Levels 3–5. Display notices at Front Desk.",
+    "priority": "medium",
+    "source": "Dean’s Office"
+  },
+  {
+    "id": "ann-003",
+    "title": "New referral form for cardiology",
+    "date": "2026-09-02",
+    "body": "Cardiology external referrals now require Form CR-14. Previous CR-11 forms will be returned. Copies are at the Front Desk binder and on the intranet.",
+    "priority": "medium",
+    "source": "Dean’s Office"
+  },
+  {
+    "id": "ann-004",
+    "title": "All-staff briefing: Monday 08:15",
+    "date": "2026-09-01",
+    "body": "Brief campus update in Auditorium A. Front-desk coverage rotation is posted on the staffing board. Attendance encouraged for shift leads.",
+    "priority": "low",
+    "source": "Dean’s Office"
+  },
+  {
+    "id": "ann-005",
+    "title": "Interpreter services: Mandarin coverage",
+    "date": "2026-08-29",
+    "body": "On-site Mandarin interpreter available Tue/Thu 09:00–15:00. Outside those hours use LanguageLine. Update visit notes with interpreter ID when used.",
+    "priority": "low",
+    "source": "Dean’s Office"
+  }
+]
