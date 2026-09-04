@@ -148,7 +148,7 @@ flowchart TB
 ### Example runtime flow
 
 1. User asks: *"What medications is Shanice Kuhn on?"*
-2. Agent calls `search_patients(last_name="Kuhn", first_name="Shanice")` → returns matching `patient_id`(s).
+2. Agent calls `search_patients(name="Shanice Kuhn")` → returns matching `patient_id`(s) with `results_table`.
 3. If multiple matches, agent asks user to confirm which patient.
 4. Agent calls `get_active_medications(patient_id=...)` → parameterized SQL against `v_active_medications`.
 5. Agent synthesizes a natural-language answer citing `patient_id` and `v_active_medications`.
@@ -364,19 +364,16 @@ All tools use a shared `bq_client.run_query(sql, params)` that:
 
 ### B.3.1 `search_patients`
 
-```python
-def search_patients(last_name: str, first_name: str | None = None) -> list[dict]:
-    """Find patients by name. Returns up to 20 matches from v_patient_360."""
-```
+Shared implementation: [`agents/patient_lookup.py`](../agents/patient_lookup.py)
+(same behavior as Suggestion / Insights).
 
-```sql
-SELECT patient_id, first_name, last_name, age_years, gender, city, state,
-       last_visit_date, active_conditions_count, active_medications_count
-FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_views.v_patient_360`
-WHERE LOWER(last_name) = LOWER(@last_name)
-  AND (@first_name IS NULL OR LOWER(first_name) LIKE CONCAT(LOWER(@first_name), '%'))
-ORDER BY last_name, first_name
-LIMIT @limit
+```python
+def search_patients(
+    name: str | None = None,
+    last_name: str | None = None,
+    first_name: str | None = None,
+) -> dict:
+    """Prefix-match name search. Returns match_count, matches, results_table, display_hint."""
 ```
 
 ### B.3.2 `get_patient_summary`
@@ -533,53 +530,23 @@ adk run
 
 <!-- AGENT:SYSTEM_PROMPT -->
 
+Shared patient-resolution / response-format / guardrail rules live in
+[`agents/patient_lookup.py`](../agents/patient_lookup.py)
+(`SHARED_PATIENT_RESOLUTION_RULES`, `SHARED_RESPONSE_FORMAT_RULES`,
+`SHARED_GUARDRAIL_RULES`) and are imported by Retrieval, Suggestion, and Insights.
+
 ```python
-# agents/retrieval/prompt.py
+# agents/retrieval/prompt.py — uses SHARED_* rules from agents/patient_lookup.py
 SYSTEM_INSTRUCTION = """
 You are the SwiftCare AI Retrieval Agent for front-desk and care coordination staff.
-
-## Your role
-- Answer questions about patient charts using ONLY the tools provided.
-- Help staff find patients and retrieve demographics, visits, timeline events,
-  medications, allergies, and vitals.
-- You retrieve and summarize data. You do NOT diagnose, prescribe, or recommend treatment.
-
+...
 ## Rules
-1. PATIENT RESOLUTION: Before any chart-specific question, ensure you have a patient_id.
-   - Use search_patients for name lookups.
-   - If multiple patients match, list them and ask the user to confirm.
-   - Never guess a patient_id.
-
-2. TOOL USE: Always call the appropriate tool. Never invent clinical data.
-   - If a tool returns no rows, say so clearly.
-   - If the question is outside your tools, explain what you can look up instead.
-
-3. RESPONSE FORMAT:
-   - Give a concise, natural-language answer.
-   - Include patient_id and the data source (view name) when summarizing chart data.
-   - Use bullet points for lists (medications, allergies, timeline events).
-
-4. GUARDRAILS:
-   - Do NOT provide medical diagnoses or treatment recommendations.
-   - Do NOT tell the user to start, stop, or change medications.
-   - If asked for clinical advice, respond: "I can show what's documented in the
-     chart. Please consult a clinician for medical decisions."
-
-5. DATA SCOPE:
-   - Project: {{GCP_PROJECT_ID}}
-   - Datasets: swiftcare_fhir_views, swiftcare_agent_cache (vitals only)
-   - You cannot access raw FHIR tables or other agents' data.
-
-## Tool guide
-| Question type | Tool |
-|---------------|------|
-| Find patient by name | search_patients |
-| Chart overview | get_patient_summary |
-| Recent events / history | get_patient_timeline |
-| Latest vitals | get_latest_vitals |
-| Visit list | get_visit_history |
-| Current medications | get_active_medications |
-| Known allergies | get_active_allergies |
+1. PATIENT RESOLUTION (shared)
+   - If the user gives a name, call search_patients immediately.
+     Do NOT ask whether the name is first or last.
+   - Single token → prefix both fields; two tokens → first/last prefixes.
+   - Multi-match: paste results_table / display_hint verbatim; wait for row # / patient_id.
+...
 """
 ```
 
@@ -772,7 +739,7 @@ Authoritative mapping for implementation and audit.
 
 | Tool | Parameters | View / Table | Required Filter | Max Rows |
 | ---- | ---------- | ------------ | --------------- | -------- |
-| `search_patients` | `last_name`, `first_name?` | `v_patient_360` | name match | 20 |
+| `search_patients` | `name?`, `last_name?`, `first_name?` | `v_patient_360` | prefix name match | 20 |
 | `get_patient_summary` | `patient_id` | `v_patient_360` | `patient_id` | 1 |
 | `get_patient_timeline` | `patient_id`, `event_type?`, `limit?` | `v_patient_timeline` | `patient_id` | 50 default |
 | `get_latest_vitals` | `patient_id` | `mv_patient_latest_vitals` | `patient_id` | 1 |

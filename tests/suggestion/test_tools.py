@@ -76,7 +76,7 @@ def test_s1_000c_single_token_prefix_matches_last_or_first():
 
 
 def test_format_matches_table_unit():
-    from agents.suggestion.tools.patient_lookup import format_matches_table
+    from agents.patient_lookup import format_matches_table
 
     table = format_matches_table(
         [
@@ -232,6 +232,7 @@ def test_s2_002_dismiss_requires_patient_match(fixture_patient_id: str):
 
 def test_s5_003_cards_include_disclaimer_unit():
     from agents.suggestion.cards import build_content
+    import json
 
     raw = build_content(
         title="t",
@@ -239,10 +240,17 @@ def test_s5_003_cards_include_disclaimer_unit():
         severity="info",
         card_type="chart_completeness",
     )
-    import json
-
     content = json.loads(raw)
     assert content["disclaimer"]
+
+
+def test_s5_prompt_shares_patient_resolution_rules():
+    from agents.suggestion.prompt import SYSTEM_INSTRUCTION
+
+    text = SYSTEM_INSTRUCTION.lower()
+    assert "do not ask whether the name is first or last" in text
+    assert "results_table" in text or "display_hint" in text
+    assert "search_patients" in text
 
 
 def test_allowlist_rejects_raw_and_cache():

@@ -1,6 +1,6 @@
 [project]
 name = "swiftcare-ai"
-version = "0.3.0"
+version = "0.4.0"
 description = "SwiftCare AI — agentic healthcare ops platform"
 requires-python = ">=3.11"
 dependencies = [

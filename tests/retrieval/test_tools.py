@@ -25,11 +25,21 @@ VALID_EVENT_TYPES = {"encounter", "condition", "observation", "medication"}
 
 @requires_bq
 def test_r1_001_search_patients_smoke(fixture_last_name: str):
-    rows = search_patients(last_name=fixture_last_name)
-    assert len(rows) >= 1
-    assert rows[0].get("patient_id")
-    assert rows[0].get("first_name") is not None
-    assert rows[0].get("last_name")
+    result = search_patients(last_name=fixture_last_name)
+    assert result["match_count"] >= 1
+    assert result["matches"][0].get("patient_id")
+    assert result["matches"][0].get("first_name") is not None
+    assert result["matches"][0].get("last_name")
+    assert "results_table" in result
+
+
+@requires_bq
+def test_r1_001b_single_token_prefix_matches():
+    """Synthea stores Kuhn96 — bare 'Kuhn' must find last-name prefix matches."""
+    result = search_patients(name="Kuhn")
+    assert result["match_count"] >= 1
+    assert "| First name |" in result["results_table"]
+    assert "display_hint" in result
 
 
 @requires_bq
@@ -75,15 +85,18 @@ def test_r1_007_get_active_allergies_smoke(fixture_patient_id: str):
 
 @requires_bq
 def test_r2_001_name_search_limit(fixture_last_name: str):
-    rows = search_patients(last_name=fixture_last_name)
-    assert len(rows) <= 20
+    result = search_patients(last_name=fixture_last_name)
+    assert result["match_count"] <= 20
+    assert len(result["matches"]) <= 20
 
 
 @requires_bq
 def test_r2_002_case_insensitive_search(fixture_last_name: str):
     lower = search_patients(last_name=fixture_last_name.lower())
     mixed = search_patients(last_name=fixture_last_name.upper())
-    assert {r["patient_id"] for r in lower} == {r["patient_id"] for r in mixed}
+    assert {r["patient_id"] for r in lower["matches"]} == {
+        r["patient_id"] for r in mixed["matches"]
+    }
 
 
 @requires_bq

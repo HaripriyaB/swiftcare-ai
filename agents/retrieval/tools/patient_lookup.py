@@ -1,54 +1,42 @@
-"""Patient name lookup against v_patient_360."""
+"""Patient name lookup against v_patient_360 for Retrieval Agent."""
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
-from agents.display_names import with_display_names
+from agents.patient_lookup import search_patients_core
 
 from ..bq_client import fq, run_query
 from ..logging import log_tool_call
 
 
 def search_patients(
-    last_name: str,
+    name: str | None = None,
+    last_name: str | None = None,
     first_name: str | None = None,
-) -> list[dict[str, Any]]:
-    """Find patients by name. Returns up to 20 matches from v_patient_360.
+) -> dict[str, Any]:
+    """Find patients by prefix-matching first and/or last name.
+
+    A bare name (e.g. "Kuhn") matches **either** first_name **or** last_name
+    with a case-insensitive prefix (so "Kuhn" finds "Kuhn96"). Results are
+    ordered best match → weakest and include a markdown ``results_table`` for
+    display in the chat UI.
 
     Args:
-        last_name: Patient family name (case-insensitive exact match).
-        first_name: Optional given-name prefix (case-insensitive).
+        name: Free-text name. One token → prefix either field.
+            Two+ tokens → first token as first_name prefix, last token as
+            last_name prefix.
+        last_name: Optional explicit last-name prefix.
+        first_name: Optional explicit first-name prefix.
 
     Returns:
-        List of matching patient summary rows.
+        match_count, matches, results_table (markdown), and helper message.
     """
-    limit = int(os.getenv("SEARCH_RESULT_LIMIT", "20"))
-    has_first = bool(first_name and first_name.strip())
-    sql = f"""
-SELECT patient_id, first_name, last_name, age_years, gender, city, state,
-       last_visit_date, active_conditions_count, active_medications_count
-FROM {fq("swiftcare_fhir_views", "v_patient_360")}
-WHERE LOWER(last_name) = LOWER(@last_name)
-  AND (@has_first_name = FALSE OR LOWER(first_name) LIKE CONCAT(LOWER(@first_name), '%'))
-ORDER BY last_name, first_name
-LIMIT @limit
-"""
-    rows, row_count, latency_ms = run_query(
-        sql,
-        {
-            "last_name": last_name,
-            "first_name": first_name or "",
-            "has_first_name": has_first,
-            "limit": limit,
-        },
+    return search_patients_core(
+        run_query=run_query,
+        fq=fq,
+        log_tool_call=log_tool_call,
+        name=name,
+        last_name=last_name,
+        first_name=first_name,
     )
-    log_tool_call(
-        "search_patients",
-        patient_id=rows[0]["patient_id"] if rows else None,
-        action="search",
-        row_count=row_count,
-        latency_ms=latency_ms,
-    )
-    return [with_display_names(r) for r in rows]

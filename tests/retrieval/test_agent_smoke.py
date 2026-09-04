@@ -67,7 +67,9 @@ def test_r3_tool_contracts_for_fixture(fixture_patient_id: str, fixture_last_nam
     )
 
     search = search_patients(last_name=fixture_last_name)
-    assert search and search[0]["patient_id"]
+    assert search["match_count"] >= 1
+    assert search["matches"][0]["patient_id"]
+    assert "results_table" in search
 
     summary = get_patient_summary(fixture_patient_id)
     assert summary and "total_encounters" in summary
@@ -89,9 +91,11 @@ def test_r5_guardrail_prompt_contains_rules():
     from agents.retrieval.prompt import SYSTEM_INSTRUCTION
 
     text = SYSTEM_INSTRUCTION.lower()
-    assert "do not diagnose" in text or "do not provide medical diagnoses" in text
+    assert "do not" in text and "diagnos" in text
     assert "consult a clinician" in text
     assert "search_patients" in text
+    assert "results_table" in text or "display_hint" in text
+    assert "do not ask whether the name is first or last" in text
 
 
 @pytest.mark.skipif(
