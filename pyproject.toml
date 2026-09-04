@@ -1,0 +1,30 @@
+[project]
+name = "swiftcare-ai"
+version = "0.3.0"
+description = "SwiftCare AI — agentic healthcare ops platform"
+requires-python = ">=3.11"
+dependencies = [
+  "google-adk>=1.0.0",
+  "google-cloud-bigquery>=3.25.0",
+  "python-dotenv>=1.0.0",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.24.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agents*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
