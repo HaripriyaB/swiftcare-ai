@@ -488,6 +488,10 @@ Chunk 5 ships the FE against this contract (MSW). Chunk 6 implements the same pa
 - **Errors:** `{ "error": "<code>", "message": "<human>" }` with appropriate HTTP status.
 - **IDs:** `patient_id`, `card_id`, `alert_id`, `session_id` are strings (UUIDs).
 - **Grounding:** responses must mirror agent tool fields; do not invent clinical rows.
+- **Authorization boundary:** the token establishes identity only. Chunk 6 must
+  authorize every patient-scoped request and bind sessions to the verified uid;
+  client-supplied `user_id` values and a guessed `session_id` must never grant
+  access. Until then, this contract is synthetic-demo only.
 
 ### Endpoints
 
@@ -721,10 +725,13 @@ CSV for AI patient list: one row per `patients[]` entry; columns = keys present 
 ```json
 {
   "session_id": "uuid",
-  "user_id": "firebase-uid-or-dev-user",
   "active_patient_id": "uuid-or-null"
 }
 ```
+
+`user_id` is response-only and is derived by the backend from the verified
+token. The client must not send it. A supplied `session_id` must be accepted
+only when it belongs to that same verified user; otherwise return 403.
 
 ### Create endpoints (optional create for cards/alerts; required for symptoms)
 

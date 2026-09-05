@@ -27,7 +27,7 @@ Chunk 1 delivers:
 1. A curated FHIR R4 patient cohort (5,000 patients) at **$0** infrastructure cost
 2. A four-layer BigQuery architecture: raw FHIR → analytics → views → agent cache, plus ops tables
 3. A structured validation framework (V1–V5) with pass/fail thresholds
-4. Agent query contracts, materialized views, and a Patient 360° summary for Chunks 2–4
+4. Agent query contracts, refreshable cache snapshot tables, and a Patient 360° summary for Chunks 2–4
 
 ---
 
@@ -66,7 +66,7 @@ Front-desk and care-coordination workflows require the following data categories
 | D5  | Cohort size          | 5,000 patients (minimum)                          | ~175K encounters, ~1M observations; stays within 10 GB free storage   |
 | D6  | Schema pattern       | raw → analytics → views → agent cache + ops       | FHIR fidelity + query performance + agent-ready layer                 |
 | D7  | Runtime access       | On-demand SQL per agent query                     | No chart replication; agents generate SQL against views/MVs           |
-| D8  | Performance          | Partitioned analytics tables + materialized views | Sub-second reads for high-frequency agent queries                     |
+| D8  | Performance          | Clustered analytics tables + refreshable cache snapshot tables | Patient-scoped reads and predictable cache refreshes without MV query-shape limits |
 | D9  | Validation           | 5-category runbook with blockers                  | Structured, repeatable, logged to `data_validation_runs`              |
 
 
@@ -80,7 +80,7 @@ Front-desk and care-coordination workflows require the following data categories
 | FHIR raw tables       | `swiftcare_fhir_raw`       | Patient, Encounter, Condition, Observation, etc.                                 |
 | Partitioned analytics | `swiftcare_fhir_analytics` | Flattened dim/fact tables with partitioning and clustering                       |
 | Semantic views        | `swiftcare_fhir_views`     | Demographics, timeline, meds, allergies, visit summary, risk flags, Patient 360° |
-| Materialized views    | `swiftcare_agent_cache`    | Latest vitals, active medications, at-risk patients                              |
+| Cache snapshot tables | `swiftcare_agent_cache`    | Latest vitals, active medications, at-risk patients; rebuilt after ETL          |
 | Ops tables            | `swiftcare_ops`            | Sessions, advisory cards, query logs, insight alerts, validation runs            |
 | Validation runbook    | Part B §B.8                | V1–V5 checks with CHECK_ID, thresholds, severity                                 |
 | Looker Studio         | `swiftcare_fhir_views`     | Optional $0 exploration dashboard                                                |
@@ -176,7 +176,7 @@ Sources requiring credentialed access (MIMIC-IV, etc.) are excluded — unnecess
 | BigQuery storage           | 10 GB/month                    | ~3–5 GB                | $0   |
 | BigQuery queries           | 1 TB processed/month           | ~50–100 GB during dev  | $0   |
 | Public dataset queries     | Included in query quota        | Exploration only       | $0   |
-| Views + materialized views | MV storage counts toward 10 GB | ~500 MB                | $0   |
+| Views + cache snapshot tables | Snapshot storage counts toward 10 GB | ~500 MB                | $0   |
 | Synthea (fallback)         | Open source                    | N/A                    | $0   |
 | Looker Studio              | Free tier                      | 1 dashboard            | $0   |
 | Cloud Healthcare API       | Pay-per-op                     | Not used               | —    |
@@ -208,12 +208,12 @@ Sources requiring credentialed access (MIMIC-IV, etc.) are excluded — unnecess
 erDiagram
   patient ||--o{ encounter : has
   patient ||--o{ condition : diagnosed_with
-  patient ||--o{ medicationrequest : prescribed
+  patient ||--o{ medication_request : prescribed
   patient ||--o{ observation : measured
   patient ||--o{ procedure : underwent
-  patient ||--o{ allergyintolerance : has
+  patient ||--o{ allergy_intolerance : has
   patient ||--o{ immunization : received
-  patient ||--o{ careplan : follows
+  patient ||--o{ care_plan : follows
   practitioner ||--o{ encounter : conducts
   organization ||--o{ encounter : hosts
   encounter ||--o{ condition : results_in
@@ -231,7 +231,7 @@ erDiagram
 - [ ] Patient cohort (5,000) loaded into `swiftcare_fhir_raw`
 - [ ] Analytics tables created in `swiftcare_fhir_analytics` with partitioning
 - [ ] All views in `swiftcare_fhir_views` including `v_patient_360`
-- [ ] Materialized views in `swiftcare_agent_cache`
+- [ ] Refreshed cache snapshot tables in `swiftcare_agent_cache`
 - [ ] Ops tables in `swiftcare_ops`
 - [ ] V1–V5 validation completed with zero blocker failures
 - [ ] Results logged in `swiftcare_ops.data_validation_runs`
@@ -277,7 +277,7 @@ CREATE SCHEMA IF NOT EXISTS `{{GCP_PROJECT_ID}}.swiftcare_fhir_views`
   OPTIONS(location = 'US', description = 'Agent-facing semantic views');
 
 CREATE SCHEMA IF NOT EXISTS `{{GCP_PROJECT_ID}}.swiftcare_agent_cache`
-  OPTIONS(location = 'US', description = 'Materialized views for hot agent queries');
+  OPTIONS(location = 'US', description = 'Refreshable cache snapshot tables for hot agent queries');
 
 CREATE SCHEMA IF NOT EXISTS `{{GCP_PROJECT_ID}}.swiftcare_ops`
   OPTIONS(location = 'US', description = 'Sessions, audit, advisories, validation');
@@ -324,28 +324,28 @@ CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.observation` AS
 SELECT x.* FROM `bigquery-public-data.fhir_synthea.observation` x
 JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c ON x.subject.patientId = c.patient_id;
 
-CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.medicationrequest` AS
-SELECT x.* FROM `bigquery-public-data.fhir_synthea.medicationrequest` x
+CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.medication_request` AS
+SELECT x.* FROM `bigquery-public-data.fhir_synthea.medication_request` x
 JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c ON x.subject.patientId = c.patient_id;
 
 CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.procedure` AS
 SELECT x.* FROM `bigquery-public-data.fhir_synthea.procedure` x
 JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c ON x.subject.patientId = c.patient_id;
 
-CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.allergyintolerance` AS
-SELECT x.* FROM `bigquery-public-data.fhir_synthea.allergyintolerance` x
+CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.allergy_intolerance` AS
+SELECT x.* FROM `bigquery-public-data.fhir_synthea.allergy_intolerance` x
 JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c ON x.patient.patientId = c.patient_id;
 
 CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.immunization` AS
 SELECT x.* FROM `bigquery-public-data.fhir_synthea.immunization` x
 JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c ON x.patient.patientId = c.patient_id;
 
-CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.diagnosticreport` AS
-SELECT x.* FROM `bigquery-public-data.fhir_synthea.diagnosticreport` x
+CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.diagnostic_report` AS
+SELECT x.* FROM `bigquery-public-data.fhir_synthea.diagnostic_report` x
 JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c ON x.subject.patientId = c.patient_id;
 
-CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.careplan` AS
-SELECT x.* FROM `bigquery-public-data.fhir_synthea.careplan` x
+CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.care_plan` AS
+SELECT x.* FROM `bigquery-public-data.fhir_synthea.care_plan` x
 JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c ON x.subject.patientId = c.patient_id;
 
 CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.organization` AS
@@ -354,13 +354,19 @@ SELECT * FROM `bigquery-public-data.fhir_synthea.organization`;
 CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.practitioner` AS
 SELECT * FROM `bigquery-public-data.fhir_synthea.practitioner`;
 
-CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.appointment` AS
-SELECT x.* FROM `bigquery-public-data.fhir_synthea.appointment` x
-JOIN `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw._cohort_patient_ids` c
-  ON x.participant[SAFE_OFFSET(0)].actor.patientId = c.patient_id;
 ```
 
-> If table names differ (e.g. PascalCase `Patient`), adjust per B.3.1 results.
+> **Schema compatibility gate:** table *and field* names in `fhir_synthea` are
+> implementation-specific. The checked-in pipeline uses snake-case resource
+> tables such as `medication_request`, `allergy_intolerance`,
+> `diagnostic_report`, and `care_plan` (not the camel-case names above), and
+> its resource fields use paths such as `condition.context.encounterId`,
+> `condition.onset.dateTime`, and `medication_request.medication.codeableConcept`.
+> Run `INFORMATION_SCHEMA.COLUMN_FIELD_PATHS` for every resource before copying
+> this snippet. Treat [`sql/02_ingest_cohort.sql`](../sql/02_ingest_cohort.sql)
+> and [`sql/03_analytics_etl.sql`](../sql/03_analytics_etl.sql) as the executable
+> source of truth for this repository; do not mix field paths from another FHIR
+> BigQuery export into the ETL.
 
 ---
 
@@ -404,7 +410,10 @@ Then run analytics ETL (B.5) to flatten CSV or FHIR raw into the analytics layer
 
 ## B.5 Analytics Layer — Partitioned Dim/Fact Tables
 
-ETL from FHIR raw into flattened, partitioned tables for performant agent queries.
+ETL from FHIR raw into flattened tables for performant agent queries. Partitioning
+is useful only when the source dates are reliably populated and queries filter on
+them; the checked-in ETL clusters by `patient_id` and clinical code instead. Do
+not claim a table is partitioned unless the deployed DDL contains `PARTITION BY`.
 
 ### B.5.1 `dim_patients`
 
@@ -420,8 +429,8 @@ SELECT
   p.address[SAFE_OFFSET(0)].city AS city,
   p.address[SAFE_OFFSET(0)].state AS state,
   p.address[SAFE_OFFSET(0)].postalCode AS zip,
-  p.deceasedBoolean AS is_deceased,
-  DATE_DIFF(COALESCE(DATE(p.deathDate), CURRENT_DATE()), DATE(p.birthDate), YEAR) AS age_years,
+  COALESCE(p.deceased.boolean, FALSE) AS is_deceased,
+  DATE_DIFF(CURRENT_DATE(), DATE(p.birthDate), YEAR) AS age_years,
   CURRENT_TIMESTAMP() AS created_at
 FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.patient` p;
 ```
@@ -430,7 +439,6 @@ FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.patient` p;
 
 ```sql
 CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_encounters`
-PARTITION BY visit_date
 CLUSTER BY patient_id, encounter_class AS
 SELECT
   e.id AS encounter_id,
@@ -438,8 +446,8 @@ SELECT
   e.participant[SAFE_OFFSET(0)].individual.practitionerId AS provider_id,
   e.serviceProvider.organizationId AS organization_id,
   e.class.code AS encounter_class,
-  e.type[SAFE_OFFSET(0)].text AS encounter_desc,
-  e.reasonCode[SAFE_OFFSET(0)].text AS reason_desc,
+  COALESCE(e.type[SAFE_OFFSET(0)].text, e.type[SAFE_OFFSET(0)].coding[SAFE_OFFSET(0)].display) AS encounter_desc,
+  COALESCE(e.reason[SAFE_OFFSET(0)].text, e.reason[SAFE_OFFSET(0)].coding[SAFE_OFFSET(0)].display) AS reason_desc,
   DATE(e.period.start) AS visit_date,
   TIMESTAMP(e.period.start) AS start_datetime,
   TIMESTAMP(e.period.end) AS stop_datetime,
@@ -452,17 +460,16 @@ FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.encounter` e;
 
 ```sql
 CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_conditions`
-PARTITION BY onset_date
 CLUSTER BY patient_id, condition_code AS
 SELECT
   c.id AS condition_id,
   c.subject.patientId AS patient_id,
-  c.encounter.encounterId AS encounter_id,
+  c.context.encounterId AS encounter_id,
   c.code.coding[SAFE_OFFSET(0)].code AS condition_code,
   c.code.text AS condition_desc,
-  DATE(c.onsetDateTime) AS onset_date,
-  DATE(c.abatementDateTime) AS abatement_date,
-  c.clinicalStatus.coding[SAFE_OFFSET(0)].code = 'active' AS is_active,
+  DATE(c.onset.dateTime) AS onset_date,
+  DATE(COALESCE(c.abatement.dateTime, c.abatement.period.start)) AS abatement_date,
+  c.clinicalStatus = 'active' AS is_active,
   CURRENT_TIMESTAMP() AS created_at
 FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.condition` c;
 ```
@@ -471,19 +478,18 @@ FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.condition` c;
 
 ```sql
 CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_medications`
-PARTITION BY start_date
 CLUSTER BY patient_id, medication_code AS
 SELECT
   m.id AS medication_id,
   m.subject.patientId AS patient_id,
-  m.encounter.encounterId AS encounter_id,
-  m.medicationCodeableConcept.coding[SAFE_OFFSET(0)].code AS medication_code,
-  m.medicationCodeableConcept.text AS medication_desc,
+  m.context.encounterId AS encounter_id,
+  m.medication.codeableConcept.coding[SAFE_OFFSET(0)].code AS medication_code,
+  m.medication.codeableConcept.text AS medication_desc,
   DATE(m.authoredOn) AS start_date,
   m.status IN ('active', 'on-hold') AS is_active,
   m.status,
   CURRENT_TIMESTAMP() AS created_at
-FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.medicationrequest` m;
+FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.medication_request` m;
 ```
 
 ### B.5.5 `fact_observations`
@@ -495,14 +501,14 @@ CLUSTER BY patient_id, category, observation_code AS
 SELECT
   o.id AS observation_id,
   o.subject.patientId AS patient_id,
-  o.encounter.encounterId AS encounter_id,
-  DATE(COALESCE(o.effectiveDateTime, o.effectivePeriod.start)) AS observation_date,
-  o.category[SAFE_OFFSET(0)].text AS category,
+  o.context.encounterId AS encounter_id,
+  DATE(COALESCE(o.effective.dateTime, o.effective.period.start)) AS observation_date,
+  COALESCE(o.category[SAFE_OFFSET(0)].coding[SAFE_OFFSET(0)].code, o.category[SAFE_OFFSET(0)].text) AS category,
   o.code.coding[SAFE_OFFSET(0)].code AS observation_code,
   o.code.text AS observation_desc,
-  o.valueQuantity.value AS value_numeric,
-  o.valueQuantity.unit AS units,
-  o.valueString AS value_string,
+  o.value.quantity.value AS value_numeric,
+  o.value.quantity.unit AS units,
+  CAST(NULL AS STRING) AS value_string,
   CURRENT_TIMESTAMP() AS created_at
 FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.observation` o;
 ```
@@ -517,9 +523,9 @@ SELECT
   a.patient.patientId AS patient_id,
   a.code.text AS allergy_desc,
   a.criticality,
-  a.clinicalStatus.coding[SAFE_OFFSET(0)].code = 'active' AS is_active,
+  a.clinicalStatus = 'active' AS is_active,
   CURRENT_TIMESTAMP() AS created_at
-FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.allergyintolerance` a;
+FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.allergy_intolerance` a;
 ```
 
 ### B.5.7 `dim_providers` and `dim_organizations`
@@ -551,12 +557,12 @@ FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.organization`;
 | `Patient`            | `patient`            | `dim_patients`      | —           |
 | `Encounter`          | `encounter`          | `fact_encounters`   | SNOMED-CT   |
 | `Condition`          | `condition`          | `fact_conditions`   | SNOMED-CT   |
-| `MedicationRequest`  | `medicationrequest`  | `fact_medications`  | RxNorm      |
+| `MedicationRequest`  | `medication_request` | `fact_medications`  | RxNorm      |
 | `Observation`        | `observation`        | `fact_observations` | LOINC       |
 | `Procedure`          | `procedure`          | — (use raw + views) | SNOMED-CT   |
-| `AllergyIntolerance` | `allergyintolerance` | `fact_allergies`    | SNOMED-CT   |
+| `AllergyIntolerance` | `allergy_intolerance`| `fact_allergies`    | SNOMED-CT   |
 | `Immunization`       | `immunization`       | — (use raw + views) | CVX         |
-| `CarePlan`           | `careplan`           | — (use raw + views) | SNOMED-CT   |
+| `CarePlan`           | `care_plan`          | — (use raw + views) | SNOMED-CT   |
 | `Organization`       | `organization`       | `dim_organizations` | —           |
 | `Practitioner`       | `practitioner`       | `dim_providers`     | —           |
 
@@ -691,11 +697,20 @@ FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_encounters`;
 
 ```sql
 CREATE OR REPLACE VIEW `{{GCP_PROJECT_ID}}.swiftcare_fhir_views.v_risk_flags` AS
-WITH enc AS (
+WITH
+-- Anchor synthetic-data rules to the cohort's newest encounter. CURRENT_DATE()
+-- would label nearly every historical Synthea patient as overdue as time passes.
+as_of AS (
+  SELECT MAX(visit_date) AS as_of_date
+  FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_encounters`
+),
+enc AS (
   SELECT patient_id, COUNT(*) AS total_encounters,
          MAX(visit_date) AS last_visit_date,
-         COUNTIF(visit_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)) AS encounters_last_90d
-  FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_encounters` GROUP BY 1
+         COUNTIF(visit_date >= DATE_SUB(as_of.as_of_date, INTERVAL 90 DAY)) AS encounters_last_90d
+  FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_encounters`
+  CROSS JOIN as_of
+  GROUP BY patient_id
 ),
 meds AS (
   SELECT patient_id, COUNT(*) AS active_med_count
@@ -708,12 +723,12 @@ conds AS (
 SELECT p.patient_id, p.first_name, p.last_name, p.age_years,
        COALESCE(e.total_encounters, 0) AS total_encounters,
        e.last_visit_date,
-       DATE_DIFF(CURRENT_DATE(), e.last_visit_date, DAY) AS days_since_last_visit,
+       DATE_DIFF(as_of.as_of_date, e.last_visit_date, DAY) AS days_since_last_visit,
        COALESCE(e.encounters_last_90d, 0) AS encounters_last_90d,
        COALESCE(m.active_med_count, 0) AS active_med_count,
        COALESCE(c.active_condition_count, 0) AS active_condition_count,
        CASE
-         WHEN DATE_DIFF(CURRENT_DATE(), e.last_visit_date, DAY) > 365 THEN 'gap_in_care'
+         WHEN DATE_DIFF(as_of.as_of_date, e.last_visit_date, DAY) > 365 THEN 'gap_in_care'
          WHEN COALESCE(m.active_med_count, 0) >= 5 THEN 'polypharmacy'
          WHEN COALESCE(e.encounters_last_90d, 0) >= 5 THEN 'high_utilizer'
          WHEN COALESCE(c.active_condition_count, 0) >= 3 THEN 'chronic_burden'
@@ -722,15 +737,21 @@ SELECT p.patient_id, p.first_name, p.last_name, p.age_years,
        CASE
          WHEN COALESCE(e.encounters_last_90d, 0) >= 5 THEN 'HIGH'
          WHEN COALESCE(c.active_condition_count, 0) >= 3 THEN 'MEDIUM'
-         WHEN DATE_DIFF(CURRENT_DATE(), e.last_visit_date, DAY) > 180 THEN 'MEDIUM'
+         WHEN DATE_DIFF(as_of.as_of_date, e.last_visit_date, DAY) > 180 THEN 'MEDIUM'
          ELSE 'LOW'
        END AS risk_level
 FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.dim_patients` p
 LEFT JOIN enc e ON p.patient_id = e.patient_id
 LEFT JOIN meds m ON p.patient_id = m.patient_id
 LEFT JOIN conds c ON p.patient_id = c.patient_id
+CROSS JOIN as_of
 WHERE NOT COALESCE(p.is_deceased, FALSE);
 ```
+
+For a production feed, replace `as_of.as_of_date` with a governed reporting
+date (usually `CURRENT_DATE()` in the clinic's reporting timezone). Record that
+date with each risk run; otherwise a dashboard cannot distinguish a genuine care
+gap from an aging static dataset.
 
 ### B.8.7 `v_patient_360`
 
@@ -759,12 +780,31 @@ LEFT JOIN (
 
 ---
 
-## B.9 Materialized Views (Agent Cache)
+## B.9 Agent Cache Snapshot Tables
+
+The following objects are deliberately **snapshot tables**, despite the legacy
+`mv_` names. BigQuery materialized views have source/query-shape restrictions
+(including restrictions around logical views) that make the `v_risk_flags`
+dependency unsuitable. Rebuild these tables after the analytics tables and
+semantic views, and expose their refresh timestamp to operators. Do not use
+`CREATE MATERIALIZED VIEW` for these definitions.
 
 ### B.9.1 Latest vitals
 
 ```sql
-CREATE MATERIALIZED VIEW IF NOT EXISTS `{{GCP_PROJECT_ID}}.swiftcare_agent_cache.mv_patient_latest_vitals` AS
+CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_agent_cache.mv_patient_latest_vitals` AS
+WITH ranked AS (
+  SELECT
+    patient_id, observation_code, value_numeric, observation_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY patient_id, observation_code
+      ORDER BY observation_date DESC, observation_id DESC
+    ) AS rn
+  FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_observations`
+  WHERE category = 'vital-signs'
+), latest AS (
+  SELECT * FROM ranked WHERE rn = 1
+)
 SELECT
   patient_id,
   MAX(IF(observation_code = '8302-2', value_numeric, NULL))  AS height_cm,
@@ -774,16 +814,16 @@ SELECT
   MAX(IF(observation_code = '8462-4', value_numeric, NULL))  AS diastolic_bp,
   MAX(IF(observation_code = '8867-4', value_numeric, NULL))  AS heart_rate,
   MAX(IF(observation_code = '9279-1', value_numeric, NULL))  AS respiratory_rate,
-  MAX(observation_date) AS latest_observation_date
-FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_observations`
-WHERE category = 'vital-signs'
+  MAX(observation_date) AS latest_observation_date,
+  CURRENT_TIMESTAMP() AS cache_refreshed_at
+FROM latest
 GROUP BY patient_id;
 ```
 
 ### B.9.2 Active medications
 
 ```sql
-CREATE MATERIALIZED VIEW IF NOT EXISTS `{{GCP_PROJECT_ID}}.swiftcare_agent_cache.mv_active_medications` AS
+CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_agent_cache.mv_active_medications` AS
 SELECT m.patient_id, p.first_name, p.last_name, m.medication_code, m.medication_desc,
        m.start_date, m.status
 FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_analytics.fact_medications` m
@@ -794,7 +834,7 @@ WHERE m.is_active = TRUE;
 ### B.9.3 At-risk patients
 
 ```sql
-CREATE MATERIALIZED VIEW IF NOT EXISTS `{{GCP_PROJECT_ID}}.swiftcare_agent_cache.mv_at_risk_patients` AS
+CREATE OR REPLACE TABLE `{{GCP_PROJECT_ID}}.swiftcare_agent_cache.mv_at_risk_patients` AS
 SELECT patient_id, first_name, last_name, age_years, encounters_last_90d,
        active_condition_count, active_med_count, days_since_last_visit, risk_flag, risk_level
 FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_views.v_risk_flags`
@@ -830,7 +870,7 @@ Run in order. Stop on blocker failure. Log results to `swiftcare_ops.data_valida
 ```
 CHECK_ID: V1-001 | NAME: raw_tables_exist | SEVERITY: blocker
 SQL: SELECT COUNT(*) AS cnt FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_raw.INFORMATION_SCHEMA.TABLES`
-     WHERE table_name IN ('patient','encounter','condition','observation','medicationrequest')
+     WHERE table_name IN ('patient','encounter','condition','observation','medication_request')
 EXPECTED: cnt = 5
 ```
 
@@ -842,7 +882,7 @@ EXPECTED: cnt = 5
 ```
 
 ```
-CHECK_ID: V1-003 | NAME: views_and_mvs_exist | SEVERITY: blocker
+CHECK_ID: V1-003 | NAME: views_and_cache_tables_exist | SEVERITY: blocker
 SQL: SELECT COUNT(*) FROM `{{GCP_PROJECT_ID}}.swiftcare_fhir_views.INFORMATION_SCHEMA.TABLES`
      WHERE table_name IN ('v_patient_demographics','v_patient_timeline','v_patient_360','v_risk_flags')
 EXPECTED: cnt = 4
@@ -1032,7 +1072,7 @@ WHERE table_name = 'patient' ORDER BY field_path LIMIT 50;
 - [ ] Run B.5 — build partitioned analytics tables
 - [ ] Run B.7 — create ops tables
 - [ ] Run B.8 — create semantic views including `v_patient_360`
-- [ ] Run B.9 — create materialized views
+- [ ] Run B.9 — create/refresh agent cache snapshot tables after the semantic views
 - [ ] Run B.11 — full validation runbook; log to `data_validation_runs`
 - [ ] Confirm zero blocker failures (A.10)
 - [ ] Optional: connect Looker Studio to `swiftcare_fhir_views`
@@ -1048,7 +1088,7 @@ WHERE table_name = 'patient' ORDER BY field_path LIMIT 50;
 | Table not found (`patient` vs `Patient`) | Run B.3.1; use exact names from `INFORMATION_SCHEMA`      |
 | `subject.patientId` is null              | Inspect raw: `SELECT subject FROM encounter LIMIT 5`      |
 | Orphan rate > 1%                         | Rebuild `_cohort_patient_ids`; re-copy all tables         |
-| MV creation fails                        | Ensure base tables exist; run B.5 before B.9              |
+| Cache-table creation fails               | Ensure base tables/views exist; run B.5 and B.8 before B.9 |
 | Query exceeds free tier                  | Filter by `patient_id`; use MVs; reduce cohort size       |
 | `deceasedBoolean` column missing         | Use `DATE(deathDate) IS NOT NULL` instead in dim_patients |
 
@@ -1088,5 +1128,4 @@ def get_patient_timeline(patient_id: str, limit: int = 50) -> list[dict]:
 
 ---
 
-> **Next:** Chunk 2 — Build Retrieval Agent (Gemini + ADK grounded in the BigQuery views and materialized views defined here).
-
+> **Next:** Chunk 2 — Build Retrieval Agent (Gemini + ADK grounded in the BigQuery views and cache snapshot tables defined here).

@@ -1,5 +1,18 @@
--- Agent cache: snapshot tables (refreshed on demand; avoids MV shape restrictions)
+-- Agent cache: snapshot tables (refreshed on demand; avoids MV shape restrictions).
+-- Legacy `mv_` names are retained for compatibility with the agent tools.
 CREATE OR REPLACE TABLE `swiftcare-patchamomma.swiftcare_agent_cache.mv_patient_latest_vitals` AS
+WITH ranked AS (
+  SELECT
+    patient_id, observation_code, value_numeric, observation_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY patient_id, observation_code
+      ORDER BY observation_date DESC, observation_id DESC
+    ) AS rn
+  FROM `swiftcare-patchamomma.swiftcare_fhir_analytics.fact_observations`
+  WHERE category = 'vital-signs'
+), latest AS (
+  SELECT * FROM ranked WHERE rn = 1
+)
 SELECT
   patient_id,
   MAX(IF(observation_code = '8302-2', value_numeric, NULL))  AS height_cm,
@@ -9,9 +22,9 @@ SELECT
   MAX(IF(observation_code = '8462-4', value_numeric, NULL))  AS diastolic_bp,
   MAX(IF(observation_code = '8867-4', value_numeric, NULL))  AS heart_rate,
   MAX(IF(observation_code = '9279-1', value_numeric, NULL))  AS respiratory_rate,
-  MAX(observation_date) AS latest_observation_date
-FROM `swiftcare-patchamomma.swiftcare_fhir_analytics.fact_observations`
-WHERE category = 'vital-signs'
+  MAX(observation_date) AS latest_observation_date,
+  CURRENT_TIMESTAMP() AS cache_refreshed_at
+FROM latest
 GROUP BY patient_id;
 
 CREATE OR REPLACE TABLE `swiftcare-patchamomma.swiftcare_agent_cache.mv_active_medications` AS

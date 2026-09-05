@@ -10,7 +10,7 @@ export function DemoBanner() {
         borderBottom: '1px solid var(--sc-border)',
       }}
     >
-      Using mock API until Chunk 6 — demo data only.
+      Demo mode — synthetic Synthea data only.
     </div>
   )
 }

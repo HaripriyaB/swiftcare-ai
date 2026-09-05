@@ -56,15 +56,18 @@ WHEN NOT MATCHED THEN
 
 def get_session(*, user_id: str, session_id: str | None = None) -> dict[str, Any]:
     if session_id and session_id in _memory:
-        return _memory[session_id]
+        row = _memory[session_id]
+        if row["user_id"] != user_id:
+            raise PermissionError("session belongs to another user")
+        return row
     if user_id in _memory:
         return _memory[user_id]
 
     sql = f"""
 SELECT session_id, user_id, active_patient_id
 FROM {fq("swiftcare_ops", "sessions")}
-WHERE (@session_id IS NOT NULL AND session_id = @session_id)
-   OR (@session_id IS NULL AND user_id = @user_id)
+WHERE user_id = @user_id
+  AND (@session_id IS NULL OR session_id = @session_id)
 ORDER BY updated_at DESC
 LIMIT 1
 """

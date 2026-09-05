@@ -98,7 +98,7 @@ All clinical reads use **guarded, parameterized SQL** against allowlisted BigQue
 | 4 | Insights agent + insight alerts | Done |
 | 5 | Frontend | Done |
 | 6 | Orchestrate agents + deploy Cloud Run | **Implemented** — [final_chunk_6.md](private_docs/final_chunk_6.md); run `./scripts/run_api.sh`, deploy `./scripts/deploy_cloud_run.sh` |
-| 7 | Full test, polish, demos, docs | **Contract ready** — [final_chunk_7.md](private_docs/final_chunk_7.md) (execute H1–H16, polish, record demos) |
+| 7 | Full test, polish, demos, docs | Done — [final_chunk_7.md](private_docs/final_chunk_7.md) |
 
 Detailed build contracts: [`private_docs/`](private_docs/) (`final_chunk_1.md` … `final_chunk_7.md`, [`spec.md`](private_docs/spec.md)).
 

@@ -8,6 +8,8 @@ import re
 import uuid
 from typing import Any, Literal
 
+from api import local_demo
+
 AgentType = Literal["retrieval", "suggestion", "insights"]
 
 _INSIGHTS = (
@@ -168,6 +170,9 @@ async def handle_chat(
             "patients": [],
         }
 
+    if local_demo.enabled():
+        return _local_demo_reply(message, patient_id)
+
     agent_type = classify_intent(message, has_active_patient=bool(patient_id))
     timeout_s = float(os.getenv("CHAT_TIMEOUT_SECONDS", "90"))
 
@@ -239,4 +244,64 @@ async def handle_chat(
         "cards": [],
         "alerts": [],
         "patients": patients,
+    }
+
+
+def _local_demo_reply(message: str, patient_id: str | None) -> dict[str, Any]:
+    """Deterministic, grounded local chat for the fixture-backed API mode."""
+    text = (message or "").lower()
+    if any(term in text for term in ("care gap", "at risk", "at-risk", "overdue")):
+        patients = local_demo.at_risk(
+            risk_flag="gap_in_care", risk_level=None, limit=10
+        )
+        return {
+            "reply": "Care-gap patients from the synthetic local fixture. These are operational scheduling flags, not diagnoses.",
+            "agent_type": "insights",
+            "patient_id": None,
+            "citations": [{"view": "mv_at_risk_patients"}],
+            "cards": [],
+            "alerts": [],
+            "patients": patients,
+        }
+
+    chart = local_demo.chart_for(patient_id or "")
+    if any(term in text for term in ("vital", "bp", "blood pressure", "heart")):
+        vitals = (chart or {}).get("vitals")
+        reply = (
+            f"Latest vitals: BP {vitals.get('systolic_bp')}/{vitals.get('diastolic_bp')}, "
+            f"heart rate {vitals.get('heart_rate')} ({vitals.get('latest_observation_date')})."
+            if vitals
+            else "Open a fixture patient first to view vitals."
+        )
+        return _local_response(reply, patient_id, "retrieval", "mv_patient_latest_vitals")
+
+    if "med" in text or "medication" in text:
+        medications = (chart or {}).get("medications", [])
+        reply = (
+            "Active medications: "
+            + ", ".join(row["medication_name"] for row in medications)
+            if medications
+            else "Open a fixture patient first to view medications."
+        )
+        return _local_response(reply, patient_id, "retrieval", "v_active_medications")
+
+    return _local_response(
+        "Try asking about care gaps, medications, or vitals. The local API is serving synthetic fixture data.",
+        patient_id,
+        "orchestrator",
+        None,
+    )
+
+
+def _local_response(
+    reply: str, patient_id: str | None, agent_type: str, view: str | None
+) -> dict[str, Any]:
+    return {
+        "reply": reply,
+        "agent_type": agent_type,
+        "patient_id": patient_id,
+        "citations": [{"view": view}] if view else [],
+        "cards": [],
+        "alerts": [],
+        "patients": [],
     }

@@ -47,6 +47,17 @@ CREATE TABLE IF NOT EXISTS `swiftcare-patchamomma.swiftcare_ops.patient_access_a
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 );
 
+-- Production authorization source. Keep it empty for the synthetic demo.
+-- A NULL patient_id is a population-level grant; concrete IDs grant one chart.
+CREATE TABLE IF NOT EXISTS `swiftcare-patchamomma.swiftcare_ops.patient_access_grants` (
+  user_id     STRING NOT NULL,
+  patient_id  STRING,
+  can_write   BOOL NOT NULL DEFAULT FALSE,
+  active      BOOL NOT NULL DEFAULT TRUE,
+  granted_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+  granted_by  STRING
+);
+
 CREATE TABLE IF NOT EXISTS `swiftcare-patchamomma.swiftcare_ops.data_validation_runs` (
   run_id        STRING NOT NULL,
   run_timestamp TIMESTAMP NOT NULL,

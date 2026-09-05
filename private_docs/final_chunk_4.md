@@ -440,7 +440,7 @@ Chunk 4 ships Insights as a **standalone ADK agent**. Full multi-agent routing l
 | ---- | ----- | ----------------- |
 | `patient_id` | FHIR UUID from `v_patient_360` | **Only** cross-agent identifier for a person |
 | `search_patients` | [`agents/patient_lookup.py`](../agents/patient_lookup.py) | Same name → id resolution rules on all three agents |
-| `swiftcare_ops.sessions` | `session_id`, `active_patient_id`, `user_id` | Orchestrator sets active patient; agents may upsert |
+| `swiftcare_ops.sessions` | `session_id`, `active_patient_id`, `user_id` | API/orchestrator sets active patient after ownership + patient-access checks; agents do not authorize or own sessions |
 | `swiftcare_ops.agent_query_log` | `agent_type` = `retrieval` \| `suggestion` \| `insights` | Audit which agent answered |
 | `swiftcare_ops.patient_access_audit` | PHI access trail | Every patient-scoped tool call |
 | Display names | [`agents/display_names.py`](../agents/display_names.py) | Strip Synthea suffixes everywhere |
@@ -510,7 +510,7 @@ flowchart LR
 
 Rules:
 
-1. Orchestrator **must** copy `patient_id` into `sessions.active_patient_id` when staff pick a row from Insights or a name search.
+1. Orchestrator **must** copy `patient_id` into `sessions.active_patient_id` when staff pick a row from Insights or a name search, but only after the API confirms the session belongs to the verified user and that user may access the patient. A session id is not an authorization token.
 2. Agents **must not** invent peer-agent tool calls in Chunk 4 — they **describe** the handoff (templates above).
 3. `insight_alerts` and `advisory_cards` stay **separate**; FE (Chunk 5) may show both layers for one patient.
 4. Logging: each hop writes its own `agent_query_log` row with the correct `agent_type`.
@@ -1194,7 +1194,7 @@ VALUES
 | ----- | --- |
 | `DefaultCredentialsError` | `gcloud auth application-default login` |
 | `404 insight_alerts` | Re-run Chunk 1 `04_ops_tables.sql` / `./scripts/run_chunk1.sh` |
-| Empty `mv_at_risk_patients` | Re-run `06_materialized_views.sql`; confirm `v_risk_flags` has non-none rows |
+| Empty `mv_at_risk_patients` | Re-run `06_materialized_views.sql` to refresh the cache snapshot table; confirm `v_risk_flags` has non-`none` rows and use the cohort reporting date for synthetic data |
 | Agent invents risk patients | Strengthen prompt; require tool call before stating lists |
 | Agent searches by name | Expected — shared `search_patients`; paste `results_table` on multi-match |
 | Empty create message | Tool auto-builds B.3.5 operational template from alert_type/severity |

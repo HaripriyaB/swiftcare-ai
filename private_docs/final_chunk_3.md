@@ -96,6 +96,12 @@ This decision does not change anything Chunk 3 implements today (still `adk web`
 - **Chunk 3 impact today:** None functionally. `create_advisory_card(..., session_id: str | None = None, ...)` and the ops logging helpers already accept a `user_id`/`session_id` parameter shape compatible with this; Chunk 3 continues to pass `None`/`"dev-user"` until Chunk 5/6 wire in real tokens.
 - **Not in scope for D11:** Firestore, Firebase Realtime Database, Firebase Hosting, or any Firebase product that would store or cache clinical/application data — those remain excluded per Chunk 1 D1.
 
+> **Security boundary:** Firebase authentication supplies identity, not patient
+> authorization. Before any non-synthetic deployment, Chunk 6 must bind every
+> session to the verified uid and check that uid's clinic-approved access before
+> the agent or a card tool receives a `patient_id`. An opaque `session_id` or a
+> user id supplied in a request is never evidence of permission.
+
 ---
 
 ## A.4 Features Delivered

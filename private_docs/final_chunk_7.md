@@ -162,12 +162,16 @@ Pub/Sub is **not** on the critical path. Mention in pitch as a future IDs-only c
 ```bash
 # frontend/.env (demo / recording — do not commit secrets)
 VITE_API_BASE_URL=https://YOUR-SERVICE-XXXX.run.app/api
-# or local:
-# VITE_API_BASE_URL=http://127.0.0.1:8080/api
-VITE_AUTH_BYPASS=true          # only for local demo; false + Firebase for stricter demo
+VITE_AUTH_BYPASS=false         # Cloud Run requires a real Firebase staff token
 VITE_DEMO_BANNER=false
 VITE_ENABLE_CHAT=true
 ```
+
+For a local-only demo, use `VITE_API_BASE_URL=http://127.0.0.1:8080/api` and
+`VITE_AUTH_BYPASS=true` together with local `API_AUTH_BYPASS=true`. The bypass
+token is intentionally rejected on Cloud Run, so it cannot be used with a public
+service URL. This remains a synthetic-data demo unless Chunk 6's production
+patient-authorization gate is implemented.
 
 ### Local API
 
@@ -292,7 +296,8 @@ Run against **live API** (local or Cloud Run). Auth: Bearer `bypass-dev-user` wh
 5. **Retrieval** — Chart Q&A; allowlisted SQL; display-name hygiene  
 6. **Suggestion** — Advisory cards; disclaimers; never diagnose/prescribe  
 7. **Insights** — Care gaps / utilizer flags; insight alerts separate from cards  
-8. **Guardrails** — No text-to-SQL; Firebase identity; audit logs; synthetic data  
+8. **Guardrails** — No text-to-SQL; Firebase identity; audit logs; synthetic
+   data; production requires per-patient authorization beyond identity
 9. **Demo / Live URL** — Screenshot or QR to Cloud Run  
 10. **Learnings & next** — Optional Pub/Sub IDs-only; Looker; stricter auth for prod  
 
