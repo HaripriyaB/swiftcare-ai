@@ -1,0 +1,15 @@
+.git
+.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+.env
+frontend/node_modules
+frontend/dist
+private_docs
+*.md
+!README.md
+.cursor
+agent-transcripts
+**/tsconfig.tsbuildinfo
+frontend/src/**/*.test.*

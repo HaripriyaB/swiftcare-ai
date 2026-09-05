@@ -6,7 +6,11 @@ import App from './App'
 import './styles/global.css'
 
 async function prepare() {
-  if (import.meta.env.DEV || import.meta.env.VITE_API_BASE_URL === '/api') {
+  // Chunk 6: MSW only in local Vite + mock API base (never in production builds)
+  if (
+    import.meta.env.DEV &&
+    import.meta.env.VITE_API_BASE_URL === '/api'
+  ) {
     const { worker } = await import('./mocks/browser')
     await worker.start({ onUnhandledRequest: 'bypass', quiet: true })
   }
