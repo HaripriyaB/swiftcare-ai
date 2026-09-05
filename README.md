@@ -12,7 +12,7 @@ An agentic, retrieval-augmented clinical operations assistant that grounds natur
 
 | Surface | URL | Status |
 | ------- | --- | ------ |
-| Live app (Cloud Run / FE) | `<!-- TODO: PUBLIC_APP_URL -->` | Pending (Chunk 6) |
+| Live app (Cloud Run / FE) | `<!-- TODO: PUBLIC_APP_URL — fill after scripts/deploy_cloud_run.sh -->` | Pending deploy ([final_chunk_6.md](private_docs/final_chunk_6.md)) |
 | Demo video | `<!-- TODO: DEMO_VIDEO_URL -->` | Pending |
 | Pitch deck | `<!-- TODO: PITCH_DECK_URL -->` | Pending |
 | Looker Studio dashboard | `<!-- TODO: LOOKER_STUDIO_URL -->` | Optional |
@@ -97,10 +97,10 @@ All clinical reads use **guarded, parameterized SQL** against allowlisted BigQue
 | 3 | Suggestion agent + advisory cards | Done |
 | 4 | Insights agent + insight alerts | Done |
 | 5 | Frontend | Done |
-| 6 | Orchestrate agents + deploy Cloud Run | `<!-- TODO -->` |
+| 6 | Orchestrate agents + deploy Cloud Run | **Contract ready** — [final_chunk_6.md](private_docs/final_chunk_6.md) (implement + deploy next) |
 | 7 | Full test, polish, demos, docs | `<!-- TODO -->` |
 
-Detailed build contracts: [`private_docs/`](private_docs/) (`final_chunk_1.md` … `final_chunk_5.md`, [`spec.md`](private_docs/spec.md)).
+Detailed build contracts: [`private_docs/`](private_docs/) (`final_chunk_1.md` … `final_chunk_6.md`, [`spec.md`](private_docs/spec.md)).
 
 ### Frontend (Chunk 5)
 
@@ -181,11 +181,22 @@ pytest tests/ -q
 pytest tests/retrieval/ tests/suggestion/ tests/insights/ -q
 ```
 
-### 6. Deploy (placeholder)
+### 6. API + Cloud Run (Chunk 6)
+
+Build contract: [`private_docs/final_chunk_6.md`](private_docs/final_chunk_6.md).
 
 ```bash
-# TODO: Cloud Run deploy steps (Chunk 6)
-# TODO: FE build & host (Chunk 5)
+# Apply symptoms ops table (once)
+bq query --use_legacy_sql=false < sql/09_patient_symptoms.sql
+
+# Local API (after api/ is implemented per chunk doc)
+./scripts/run_api.sh
+# → http://127.0.0.1:8080/api/v1/health
+
+# Deploy (after Dockerfile + scripts/deploy_cloud_run.sh exist)
+./scripts/deploy_cloud_run.sh
+# Then set README Public URL to the printed Cloud Run URL
+# Point FE: VITE_API_BASE_URL=https://<service>.run.app/api  VITE_DEMO_BANNER=false
 ```
 
 ---
@@ -194,16 +205,14 @@ pytest tests/retrieval/ tests/suggestion/ tests/insights/ -q
 
 ```text
 patchamomma2026/
-├── agents/
-│   ├── patient_lookup.py      # Shared name search + prompt rules
-│   ├── display_names.py
-│   ├── retrieval/             # Chunk 2
-│   ├── suggestion/            # Chunk 3
-│   └── insights/              # Chunk 4
-├── sql/                       # Chunk 1 BigQuery scripts
-├── scripts/                   # run_chunk1 + run_*_agent.sh
-├── tests/
-├── private_docs/              # Spec + final_chunk_* build guides
+├── agents/                    # Chunks 2–4 ADK agents
+├── api/                       # Chunk 6 FastAPI (per final_chunk_6.md)
+├── frontend/                  # Chunk 5 React FE
+├── sql/                       # Chunk 1 + sql/09_patient_symptoms.sql
+├── scripts/                   # agents, run_api, deploy_cloud_run
+├── tests/                     # agent + tests/api
+├── private_docs/              # Spec + final_chunk_1…6
+├── Dockerfile                 # Chunk 6
 ├── pyproject.toml
 ├── .env.example
 └── README.md
