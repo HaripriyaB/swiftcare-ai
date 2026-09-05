@@ -1,59 +1,64 @@
 # Cloud Build: build FE+API image, push to Artifact Registry, deploy Cloud Run.
 # Used by scripts/deploy_cloud_run.sh and by a GitHub push trigger.
 #
-# Required substitutions (set by deploy script or the Cloud Build trigger):
-#   _IMAGE, _REGION, _SERVICE, _CLOUD_RUN_SA, _CORS_ORIGINS,
-#   _VITE_FIREBASE_API_KEY, _VITE_FIREBASE_AUTH_DOMAIN,
-#   _VITE_FIREBASE_PROJECT_ID, _VITE_FIREBASE_APP_ID
+# Required for custom build SA (set on the trigger): logsBucket below.
+# Substitutions: deploy script or trigger should set Firebase web config;
+# _IMAGE may be omitted on GitHub triggers (falls back to $SHORT_SHA).
+logsBucket: gs://swiftcare-patchamomma-build-logs
+
 steps:
   - name: gcr.io/cloud-builders/docker
     id: build
+    entrypoint: bash
     args:
-      - build
-      - --build-arg
-      - VITE_API_BASE_URL=${_VITE_API_BASE_URL}
-      - --build-arg
-      - VITE_AUTH_BYPASS=${_VITE_AUTH_BYPASS}
-      - --build-arg
-      - VITE_DEMO_BANNER=${_VITE_DEMO_BANNER}
-      - --build-arg
-      - VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}
-      - --build-arg
-      - VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}
-      - --build-arg
-      - VITE_FIREBASE_PROJECT_ID=${_VITE_FIREBASE_PROJECT_ID}
-      - --build-arg
-      - VITE_FIREBASE_APP_ID=${_VITE_FIREBASE_APP_ID}
-      - -t
-      - ${_IMAGE}
-      - .
+      - -c
+      - |
+        set -euxo pipefail
+        IMAGE="${_IMAGE}"
+        if [[ -z "$$IMAGE" ]]; then
+          IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_SERVICE}:$SHORT_SHA"
+        fi
+        echo "$$IMAGE" > /workspace/image.txt
+        docker build \
+          --build-arg "VITE_API_BASE_URL=${_VITE_API_BASE_URL}" \
+          --build-arg "VITE_AUTH_BYPASS=${_VITE_AUTH_BYPASS}" \
+          --build-arg "VITE_DEMO_BANNER=${_VITE_DEMO_BANNER}" \
+          --build-arg "VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}" \
+          --build-arg "VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}" \
+          --build-arg "VITE_FIREBASE_PROJECT_ID=${_VITE_FIREBASE_PROJECT_ID}" \
+          --build-arg "VITE_FIREBASE_APP_ID=${_VITE_FIREBASE_APP_ID}" \
+          -t "$$IMAGE" .
 
   - name: gcr.io/cloud-builders/docker
     id: push
+    entrypoint: bash
     args:
-      - push
-      - ${_IMAGE}
+      - -c
+      - |
+        set -euxo pipefail
+        IMAGE="$$(cat /workspace/image.txt)"
+        docker push "$$IMAGE"
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy
-    entrypoint: gcloud
+    entrypoint: bash
     args:
-      - run
-      - deploy
-      - ${_SERVICE}
-      - --image=${_IMAGE}
-      - --region=${_REGION}
-      - --platform=managed
-      - --allow-unauthenticated
-      - --service-account=${_CLOUD_RUN_SA}
-      - --set-env-vars=GCP_PROJECT_ID=$PROJECT_ID,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_GENAI_USE_VERTEXAI=${_GOOGLE_GENAI_USE_VERTEXAI},GOOGLE_CLOUD_LOCATION=${_REGION},API_AUTH_BYPASS=false,FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},CORS_ORIGINS=${_CORS_ORIGINS},BQ_DATASET_OPS=${_BQ_DATASET_OPS},LOG_QUERIES_TO_BQ=${_LOG_QUERIES_TO_BQ},STATIC_FE_DIR=/app/frontend/dist
-
-images:
-  - ${_IMAGE}
+      - -c
+      - |
+        set -euxo pipefail
+        IMAGE="$$(cat /workspace/image.txt)"
+        gcloud run deploy "${_SERVICE}" \
+          --image="$$IMAGE" \
+          --region="${_REGION}" \
+          --platform=managed \
+          --allow-unauthenticated \
+          --service-account="${_CLOUD_RUN_SA}" \
+          --set-env-vars="GCP_PROJECT_ID=$PROJECT_ID,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_GENAI_USE_VERTEXAI=${_GOOGLE_GENAI_USE_VERTEXAI},GOOGLE_CLOUD_LOCATION=${_REGION},API_AUTH_BYPASS=false,FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},CORS_ORIGINS=${_CORS_ORIGINS},BQ_DATASET_OPS=${_BQ_DATASET_OPS},LOG_QUERIES_TO_BQ=${_LOG_QUERIES_TO_BQ},STATIC_FE_DIR=/app/frontend/dist"
 
 substitutions:
   _REGION: asia-south1
   _SERVICE: swiftcare-api
+  _ARTIFACT_REPO: swiftcare
   _CLOUD_RUN_SA: swiftcare-cloudrun@swiftcare-patchamomma.iam.gserviceaccount.com
   _CORS_ORIGINS: https://example.com
   _FIREBASE_PROJECT_ID: swiftcare-patchamomma
@@ -67,6 +72,5 @@ substitutions:
   _VITE_FIREBASE_AUTH_DOMAIN: ""
   _VITE_FIREBASE_PROJECT_ID: ""
   _VITE_FIREBASE_APP_ID: ""
-  # Set by deploy script or trigger, e.g.
-  # asia-south1-docker.pkg.dev/swiftcare-patchamomma/swiftcare/swiftcare-api:$SHORT_SHA
+  # Optional; empty → ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_SERVICE}:$SHORT_SHA
   _IMAGE: ""
