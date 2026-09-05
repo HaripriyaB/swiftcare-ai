@@ -17,8 +17,28 @@ REPO="${ARTIFACT_REPO:-swiftcare}"
 SA="${CLOUD_RUN_SA:-}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/${SERVICE}:$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo latest)"
 
-echo "Building and pushing $IMAGE"
-gcloud builds submit "$ROOT" --tag "$IMAGE" --project "$PROJECT"
+BUILD_LOGS_BUCKET="${BUILD_LOGS_BUCKET:-gs://${PROJECT}-build-logs}"
+
+BUILD_ARGS=(
+  builds submit "$ROOT"
+  --tag "$IMAGE"
+  --project "$PROJECT"
+  --region "$REGION"
+)
+if [[ -n "$SA" ]]; then
+  # A user-specified build service account cannot write to the default
+  # Google-owned logs bucket, so logs go to $BUILD_LOGS_BUCKET, which must
+  # already exist in $REGION and be writable by $SA.
+  BUILD_ARGS+=(
+    --service-account "$SA"
+    --gcs-log-dir "$BUILD_LOGS_BUCKET"
+  )
+  echo "Building and pushing $IMAGE using service account $SA"
+else
+  echo "Building and pushing $IMAGE"
+fi
+
+gcloud "${BUILD_ARGS[@]}"
 
 ENV_VARS="GCP_PROJECT_ID=${PROJECT}"
 ENV_VARS+=",GOOGLE_CLOUD_PROJECT=${PROJECT}"
