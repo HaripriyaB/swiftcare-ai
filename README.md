@@ -12,9 +12,9 @@ An agentic, retrieval-augmented clinical operations assistant that grounds natur
 
 | Surface | URL | Status |
 | ------- | --- | ------ |
-| Live app (Cloud Run / FE) | `<!-- TODO: PUBLIC_APP_URL — fill after scripts/deploy_cloud_run.sh -->` | Pending deploy ([final_chunk_6.md](private_docs/final_chunk_6.md)) |
-| Demo video | `<!-- TODO: DEMO_VIDEO_URL -->` | Pending |
-| Pitch deck | `<!-- TODO: PITCH_DECK_URL -->` | Pending |
+| Live app (Cloud Run / FE) | `<!-- TODO: PUBLIC_APP_URL — fill after scripts/deploy_cloud_run.sh -->` | Pending deploy; see [final_chunk_7.md](private_docs/final_chunk_7.md) §B.7 |
+| Demo video | `<!-- TODO: DEMO_VIDEO_URL -->` | Pending — script in [final_chunk_7.md](private_docs/final_chunk_7.md) §B.5 |
+| Pitch deck | `<!-- TODO: PITCH_DECK_URL -->` | Pending — outline in [final_chunk_7.md](private_docs/final_chunk_7.md) §B.6 |
 | Looker Studio dashboard | `<!-- TODO: LOOKER_STUDIO_URL -->` | Optional |
 | Repo | `<!-- TODO: PUBLIC_REPO_URL -->` | — |
 
@@ -98,9 +98,9 @@ All clinical reads use **guarded, parameterized SQL** against allowlisted BigQue
 | 4 | Insights agent + insight alerts | Done |
 | 5 | Frontend | Done |
 | 6 | Orchestrate agents + deploy Cloud Run | **Implemented** — [final_chunk_6.md](private_docs/final_chunk_6.md); run `./scripts/run_api.sh`, deploy `./scripts/deploy_cloud_run.sh` |
-| 7 | Full test, polish, demos, docs | `<!-- TODO -->` |
+| 7 | Full test, polish, demos, docs | **Contract ready** — [final_chunk_7.md](private_docs/final_chunk_7.md) (execute H1–H16, polish, record demos) |
 
-Detailed build contracts: [`private_docs/`](private_docs/) (`final_chunk_1.md` … `final_chunk_6.md`, [`spec.md`](private_docs/spec.md)).
+Detailed build contracts: [`private_docs/`](private_docs/) (`final_chunk_1.md` … `final_chunk_7.md`, [`spec.md`](private_docs/spec.md)).
 
 ### Frontend (Chunk 5)
 
@@ -211,7 +211,7 @@ patchamomma2026/
 ├── sql/                       # Chunk 1 + sql/09_patient_symptoms.sql
 ├── scripts/                   # agents, run_api, deploy_cloud_run
 ├── tests/                     # agent + tests/api
-├── private_docs/              # Spec + final_chunk_1…6
+├── private_docs/              # Spec + final_chunk_1…7
 ├── Dockerfile                 # Chunk 6
 ├── pyproject.toml
 ├── .env.example
@@ -220,12 +220,15 @@ patchamomma2026/
 
 ---
 
-## Demo script (placeholder)
+## Demo script
 
-1. `<!-- TODO: DEMO_STEP_1 — population care gaps via Insights -->`
-2. `<!-- TODO: DEMO_STEP_2 — chart Q&A via Retrieval -->`
-3. `<!-- TODO: DEMO_STEP_3 — advisory cards via Suggestion -->`
-4. `<!-- TODO: DEMO_STEP_4 — FE / Cloud Run walkthrough -->`
+Full timed script + pitch outline: [`private_docs/final_chunk_7.md`](private_docs/final_chunk_7.md) (§B.5–B.6). Condensed walkthrough:
+
+1. Open **Insights** → care gaps (top 5) → optional dismiss alert
+2. **Home** → search *Kuhn* → open patient → scan meds / visits
+3. **Next steps** → show disclaimer → dismiss one advisory card
+4. **Chat** → meds question; then refuse “diagnose and prescribe”
+5. Show **Cloud Run** URL / architecture one-liner (warm `GET /api/v1/health` first)
 
 ---
 
