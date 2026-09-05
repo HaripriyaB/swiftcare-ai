@@ -79,12 +79,12 @@ All clinical reads use **guarded, parameterized SQL** against allowlisted BigQue
 | Data | BigQuery (`bigquery-public-data.fhir_synthea` cohort) |
 | Backend | Python 3.11+, FastAPI *(Chunk 6)* |
 | Frontend | React *(Chunk 5)* |
-| Auth (planned) | Firebase Authentication (identity only; data stays in BigQuery) |
+| Auth | Firebase Authentication (identity only; data stays in BigQuery) |
 | Deploy | Docker → Cloud Run *(Chunk 6)* |
 | Analytics | Looker Studio (optional) |
 | Build tools | Cursor / Antigravity-style agentic IDE workflows |
 
-**Google Cloud services (planned / in use):** Gemini API / Vertex AI, ADK, BigQuery, Looker Studio, Pub/Sub, Firebase Auth, Cloud Run.
+**Google Cloud services (in use):** Gemini API / Vertex AI, ADK, BigQuery, Looker Studio, Firebase Auth, Cloud Run.
 
 ---
 
@@ -189,15 +189,149 @@ Build contract: [`private_docs/final_chunk_6.md`](private_docs/final_chunk_6.md)
 # Apply symptoms ops table (once)
 bq query --use_legacy_sql=false < sql/09_patient_symptoms.sql
 
-# Local API (after api/ is implemented per chunk doc)
+# Local API
 ./scripts/run_api.sh
 # → http://127.0.0.1:8080/api/v1/health
 
-# Deploy (after Dockerfile + scripts/deploy_cloud_run.sh exist)
+# Deploy (requires VITE_FIREBASE_* in root .env — see Firebase Auth below)
 ./scripts/deploy_cloud_run.sh
-# Then set README Public URL to the printed Cloud Run URL
-# Point FE: VITE_API_BASE_URL=https://<service>.run.app/api  VITE_DEMO_BANNER=false
+# Then set README Public URL + CORS_ORIGINS to the printed Cloud Run URL
 ```
+
+### 7. Enable Firebase Authentication
+
+Staff sign-in uses **Firebase Auth email/password**. The API verifies ID tokens with the Admin SDK; clinical data stays in BigQuery.
+
+#### Console (one-time)
+
+1. Open [Firebase Console](https://console.firebase.google.com/) → add/select project **`swiftcare-patchamomma`** (same as GCP).
+2. **Build → Authentication → Get started → Sign-in method** → enable **Email/Password**.
+3. **Project settings → Your apps → Add app → Web** → register e.g. `swiftcare-web`. Copy `apiKey`, `authDomain`, `projectId`, `appId`.
+4. **Authentication → Users → Add user** → create a staff email/password.
+5. Copy that user’s **User UID** for the access grant below.
+6. (Cloud Run) **Authentication → Settings → Authorized domains** → add your Cloud Run host (e.g. `swiftcare-api-xxxxx-el.a.run.app`) after the first deploy.
+
+#### Env files
+
+Root `.env` (used by API + `deploy_cloud_run.sh`):
+
+```bash
+FIREBASE_PROJECT_ID=swiftcare-patchamomma
+API_AUTH_BYPASS=false   # local live-token testing; Cloud Run always forces false
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=swiftcare-patchamomma.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=swiftcare-patchamomma
+VITE_FIREBASE_APP_ID=1:...:web:...
+# After deploy:
+# CORS_ORIGINS=https://YOUR-SERVICE-XXXX.run.app
+```
+
+Local FE against a live API (`frontend/.env`):
+
+```bash
+VITE_AUTH_BYPASS=false
+VITE_API_BASE_URL=http://127.0.0.1:8080/api
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=swiftcare-patchamomma
+VITE_FIREBASE_APP_ID=...
+VITE_DEMO_BANNER=false
+```
+
+Keep `VITE_AUTH_BYPASS=true` only for MSW offline demos.
+
+#### Access grants (required outside local demo)
+
+Valid Firebase login is not enough for charts/insights. Insert a grant for the staff UID:
+
+```bash
+# Edit sql/10_seed_access_grant.example.sql — replace YOUR_FIREBASE_UID
+bq query --use_legacy_sql=false < sql/10_seed_access_grant.example.sql
+```
+
+#### Local live check
+
+```bash
+gcloud auth application-default login   # ADC for Firebase Admin verify
+./scripts/run_api.sh                    # API_AUTH_BYPASS=false in .env
+cd frontend && npm run dev              # VITE_AUTH_BYPASS=false
+```
+
+Sign in with the staff email/password → API calls send `Authorization: Bearer <Firebase ID token>`.
+
+#### Cloud Run
+
+`./scripts/deploy_cloud_run.sh` bakes `VITE_FIREBASE_*` into the FE image via `cloudbuild.yaml`, deploys Cloud Run (`API_AUTH_BYPASS=false`), and prints the public URL. Update `CORS_ORIGINS` and Firebase authorized domains to that host, then redeploy if needed.
+
+### 8. Continuous deploy (GitHub → Cloud Build)
+
+Repo remote: `https://github.com/HaripriyaB/swiftcare-ai.git`.  
+Every push to `main` can rebuild the image and redeploy Cloud Run via a **Cloud Build trigger** (no GitHub Actions required).
+
+#### A. One-time IAM (build SA used by the trigger)
+
+Use the same SA as local deploys (`swiftcare-cloudrun@…`). It already builds; for deploy it also needs:
+
+```bash
+PROJECT=swiftcare-patchamomma
+SA=swiftcare-cloudrun@${PROJECT}.iam.gserviceaccount.com
+
+gcloud projects add-iam-policy-binding "$PROJECT" \
+  --member="serviceAccount:${SA}" \
+  --role="roles/run.admin"
+
+gcloud iam service-accounts add-iam-policy-binding "$SA" \
+  --member="serviceAccount:${SA}" \
+  --role="roles/iam.serviceAccountUser" \
+  --project="$PROJECT"
+```
+
+(`roles/artifactregistry.writer`, `roles/logging.logWriter`, and the logs-bucket writer binding from earlier stay as they are.)
+
+#### B. Connect GitHub to Cloud Build
+
+1. Open [Cloud Build → Triggers](https://console.cloud.google.com/cloud-build/triggers?project=swiftcare-patchamomma) (region **`asia-south1`** — same as your builds).
+2. **Connect repository** → **GitHub (Cloud Build GitHub App)** → authenticate → select **`HaripriyaB/swiftcare-ai`**.
+3. Approve the GitHub App install on that repo (or the org).
+
+#### C. Create the push trigger
+
+1. **Create trigger**
+   - Name: `deploy-swiftcare-api`
+   - Event: **Push to a branch**
+   - Branch: `^main$` (or `^master$` if that is your default)
+   - Configuration: **Cloud Build configuration file**
+   - Location: `cloudbuild.yaml`
+   - Region: `asia-south1`
+   - Service account: `swiftcare-cloudrun@swiftcare-patchamomma.iam.gserviceaccount.com`
+2. **Substitution variables** (same values as root `.env` — Firebase web config is client-side public):
+
+| Variable | Example |
+| -------- | ------- |
+| `_IMAGE` | `asia-south1-docker.pkg.dev/swiftcare-patchamomma/swiftcare/swiftcare-api:$SHORT_SHA` |
+| `_REGION` | `asia-south1` |
+| `_SERVICE` | `swiftcare-api` |
+| `_CLOUD_RUN_SA` | `swiftcare-cloudrun@swiftcare-patchamomma.iam.gserviceaccount.com` |
+| `_CORS_ORIGINS` | your Cloud Run URL (after first deploy) |
+| `_FIREBASE_PROJECT_ID` | `swiftcare-patchamomma` |
+| `_VITE_FIREBASE_API_KEY` | from Firebase Console |
+| `_VITE_FIREBASE_AUTH_DOMAIN` | `swiftcare-patchamomma.firebaseapp.com` |
+| `_VITE_FIREBASE_PROJECT_ID` | `swiftcare-patchamomma` |
+| `_VITE_FIREBASE_APP_ID` | from Firebase Console |
+
+`$SHORT_SHA` is filled by Cloud Build for each commit.
+
+3. Save → **Run** once manually to verify, then push to `main`.
+
+#### D. Day-to-day
+
+```bash
+git push origin main
+```
+
+Cloud Build runs `cloudbuild.yaml` (build → push → `gcloud run deploy`). Watch progress under **Cloud Build → History**.
+
+Manual deploys still work: `./scripts/deploy_cloud_run.sh` (same yaml).
 
 ---
 
@@ -213,6 +347,7 @@ patchamomma2026/
 ├── tests/                     # agent + tests/api
 ├── private_docs/              # Spec + final_chunk_1…7
 ├── Dockerfile                 # Chunk 6
+├── cloudbuild.yaml            # FE Firebase build-args for Cloud Build
 ├── pyproject.toml
 ├── .env.example
 └── README.md

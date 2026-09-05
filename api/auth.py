@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 
@@ -10,6 +11,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 _bearer = HTTPBearer(auto_error=False)
 _firebase_ready = False
+_firebase_init_error: str | None = None
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -25,8 +28,8 @@ def auth_bypass_enabled() -> bool:
 
 
 def _init_firebase() -> None:
-    global _firebase_ready
-    if _firebase_ready:
+    global _firebase_ready, _firebase_init_error
+    if _firebase_ready or _firebase_init_error is not None:
         return
     try:
         import firebase_admin
@@ -36,12 +39,18 @@ def _init_firebase() -> None:
             project_id = os.getenv("FIREBASE_PROJECT_ID") or os.getenv(
                 "GCP_PROJECT_ID"
             )
-            opts = {"projectId": project_id} if project_id else None
+            if not project_id:
+                raise RuntimeError(
+                    "FIREBASE_PROJECT_ID (or GCP_PROJECT_ID) is not set"
+                )
             cred = credentials.ApplicationDefault()
-            firebase_admin.initialize_app(cred, opts)
+            firebase_admin.initialize_app(cred, {"projectId": project_id})
         _firebase_ready = True
-    except Exception:
+        _firebase_init_error = None
+    except Exception as exc:
         _firebase_ready = False
+        _firebase_init_error = str(exc)
+        _log.exception("Firebase Admin failed to initialize")
 
 
 def get_current_user(
@@ -58,6 +67,19 @@ def get_current_user(
         return CurrentUser(user_id="dev-user", email="dev-user@local")
 
     _init_firebase()
+    if not _firebase_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "auth_unavailable",
+                "message": (
+                    "Firebase Admin is not initialized. "
+                    "Set FIREBASE_PROJECT_ID and ensure Application Default "
+                    "Credentials can access the Firebase project."
+                ),
+            },
+        )
+
     try:
         from firebase_admin import auth as fb_auth
 

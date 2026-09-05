@@ -25,15 +25,22 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const firebaseReady = bypass || Boolean(import.meta.env.VITE_FIREBASE_API_KEY)
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    if (!firebaseReady) {
+      setError(
+        'Firebase is not configured. Set VITE_FIREBASE_* in frontend/.env (or rebuild the image with those build args).',
+      )
+      return
+    }
     try {
       await signIn(email, password)
       nav('/')
     } catch {
-      setError('Sign-in failed. Check Firebase config or use bypass.')
+      setError('Sign-in failed. Check email/password or Firebase Auth settings.')
     }
   }
 

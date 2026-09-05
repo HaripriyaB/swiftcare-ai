@@ -1,0 +1,72 @@
+# Cloud Build: build FE+API image, push to Artifact Registry, deploy Cloud Run.
+# Used by scripts/deploy_cloud_run.sh and by a GitHub push trigger.
+#
+# Required substitutions (set by deploy script or the Cloud Build trigger):
+#   _IMAGE, _REGION, _SERVICE, _CLOUD_RUN_SA, _CORS_ORIGINS,
+#   _VITE_FIREBASE_API_KEY, _VITE_FIREBASE_AUTH_DOMAIN,
+#   _VITE_FIREBASE_PROJECT_ID, _VITE_FIREBASE_APP_ID
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - --build-arg
+      - VITE_API_BASE_URL=${_VITE_API_BASE_URL}
+      - --build-arg
+      - VITE_AUTH_BYPASS=${_VITE_AUTH_BYPASS}
+      - --build-arg
+      - VITE_DEMO_BANNER=${_VITE_DEMO_BANNER}
+      - --build-arg
+      - VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}
+      - --build-arg
+      - VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}
+      - --build-arg
+      - VITE_FIREBASE_PROJECT_ID=${_VITE_FIREBASE_PROJECT_ID}
+      - --build-arg
+      - VITE_FIREBASE_APP_ID=${_VITE_FIREBASE_APP_ID}
+      - -t
+      - ${_IMAGE}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    args:
+      - push
+      - ${_IMAGE}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --service-account=${_CLOUD_RUN_SA}
+      - --set-env-vars=GCP_PROJECT_ID=$PROJECT_ID,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_GENAI_USE_VERTEXAI=${_GOOGLE_GENAI_USE_VERTEXAI},GOOGLE_CLOUD_LOCATION=${_REGION},API_AUTH_BYPASS=false,FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID},CORS_ORIGINS=${_CORS_ORIGINS},BQ_DATASET_OPS=${_BQ_DATASET_OPS},LOG_QUERIES_TO_BQ=${_LOG_QUERIES_TO_BQ},STATIC_FE_DIR=/app/frontend/dist
+
+images:
+  - ${_IMAGE}
+
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: swiftcare-api
+  _CLOUD_RUN_SA: swiftcare-cloudrun@swiftcare-patchamomma.iam.gserviceaccount.com
+  _CORS_ORIGINS: https://example.com
+  _FIREBASE_PROJECT_ID: swiftcare-patchamomma
+  _BQ_DATASET_OPS: swiftcare_ops
+  _LOG_QUERIES_TO_BQ: "TRUE"
+  _GOOGLE_GENAI_USE_VERTEXAI: "TRUE"
+  _VITE_API_BASE_URL: /api
+  _VITE_AUTH_BYPASS: "false"
+  _VITE_DEMO_BANNER: "false"
+  _VITE_FIREBASE_API_KEY: ""
+  _VITE_FIREBASE_AUTH_DOMAIN: ""
+  _VITE_FIREBASE_PROJECT_ID: ""
+  _VITE_FIREBASE_APP_ID: ""
+  # Set by deploy script or trigger, e.g.
+  # asia-south1-docker.pkg.dev/swiftcare-patchamomma/swiftcare/swiftcare-api:$SHORT_SHA
+  _IMAGE: ""
