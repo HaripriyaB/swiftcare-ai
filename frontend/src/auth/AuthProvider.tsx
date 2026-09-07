@@ -9,11 +9,12 @@ import {
 } from 'react'
 import {
   onAuthStateChanged,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   type User,
 } from 'firebase/auth'
-import { getFirebaseAuth } from './firebase'
+import { getFirebaseAuth, getGoogleProvider } from './firebase'
 import { setTokenGetter } from '../api/client'
 
 type AuthState = {
@@ -21,6 +22,7 @@ type AuthState = {
   bypass: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
   continueAsDev: () => void
   signOut: () => Promise<void>
   getIdToken: () => Promise<string | null>
@@ -69,6 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password)
   }, [])
 
+  const signInWithGoogle = useCallback(async () => {
+    const auth = getFirebaseAuth()
+    const provider = getGoogleProvider()
+    if (!auth || !provider) throw new Error('Firebase Auth is not configured')
+    await signInWithPopup(auth, provider)
+  }, [])
+
   const continueAsDev = useCallback(() => {
     setUser({ uid: 'dev-user', email: 'dev-user@local' })
   }, [])
@@ -88,11 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       bypass,
       loading,
       signIn,
+      signInWithGoogle,
       continueAsDev,
       signOut,
       getIdToken,
     }),
-    [user, bypass, loading, signIn, continueAsDev, signOut, getIdToken],
+    [user, bypass, loading, signIn, signInWithGoogle, continueAsDev, signOut, getIdToken],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

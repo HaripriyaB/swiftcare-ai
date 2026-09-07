@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { DemoBanner } from './DemoBanner'
@@ -19,9 +19,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav className="row app-header__nav" style={{ gap: '1rem' }}>
           <NavLink to="/" end>
-            Home
+            Today
           </NavLink>
-          <NavLink to="/doctors">Doctors</NavLink>
+          <NavLink to="/patients">Patients</NavLink>
           <NavLink to="/insights">Insights</NavLink>
           {looker ? (
             <a href={looker} target="_blank" rel="noreferrer">
@@ -54,13 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div>Main desk · (617) 555-0140</div>
             <div>Emergency · (617) 555-0911</div>
           </div>
-          <div className="muted" style={{ fontSize: '0.85rem' }}>
-            Notices from the{' '}
-            <Link to="/" style={{ color: 'var(--sc-accent)' }}>
-              Dean’s Office
-            </Link>{' '}
-            appear on Home.
-          </div>
+          <div className="muted" style={{ fontSize: '0.85rem' }}>Synthetic demo data · Operational support only.</div>
         </div>
       </footer>
     </div>

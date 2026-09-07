@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 
-from api.routers import chat, health, insights, patients, session  # noqa: E402
+from api.routers import chat, continuity, health, insights, patients, session  # noqa: E402
 
 app = FastAPI(title="SwiftCare AI API", version="0.6.0")
 
@@ -49,6 +49,7 @@ async def http_exception_handler(
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(session.router, prefix="/api/v1")
 app.include_router(patients.router, prefix="/api/v1")
+app.include_router(continuity.router, prefix="/api/v1")
 app.include_router(insights.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 

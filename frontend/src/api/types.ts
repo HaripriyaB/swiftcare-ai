@@ -14,6 +14,35 @@ export type AlertType =
   | 'scheduling_inefficiency'
 export type SymptomReportedBy = 'patient' | 'staff'
 export type SymptomStatus = 'active' | 'resolved'
+export type ContinuityPriority = 'HIGH' | 'MEDIUM' | 'LOW'
+export type ContinuityStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED'
+
+export interface ContinuityEvidence {
+  label: string
+  value: string
+  source: string
+}
+
+export interface ContinuityCard {
+  card_id: string
+  patient_id: string
+  patient_name: string
+  priority: ContinuityPriority
+  priority_score: number
+  action_type: string
+  action_label: string
+  why_now: string
+  evidence: ContinuityEvidence[]
+  status: ContinuityStatus
+  rule_version: string
+  created_at: string
+  updated_at: string
+  disclaimer: string
+}
+
+export interface ContinuityQueueResponse {
+  cards: ContinuityCard[]
+}
 
 export interface PatientMatch {
   patient_id: string

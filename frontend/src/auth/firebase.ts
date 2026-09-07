@@ -1,8 +1,9 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, type Auth } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth'
 
 let app: FirebaseApp | undefined
 let auth: Auth | undefined
+let googleProvider: GoogleAuthProvider | undefined
 
 export function getFirebaseAuth(): Auth | null {
   if (import.meta.env.VITE_AUTH_BYPASS === 'true') return null
@@ -18,4 +19,13 @@ export function getFirebaseAuth(): Auth | null {
     auth = getAuth(app)
   }
   return auth!
+}
+
+export function getGoogleProvider(): GoogleAuthProvider | null {
+  if (!getFirebaseAuth()) return null
+  if (!googleProvider) {
+    googleProvider = new GoogleAuthProvider()
+    googleProvider.setCustomParameters({ prompt: 'select_account' })
+  }
+  return googleProvider
 }

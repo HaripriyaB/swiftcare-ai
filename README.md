@@ -255,16 +255,16 @@ After the first successful deploy:
 
 ### 7. Enable Firebase Authentication
 
-Staff sign-in uses **Firebase Auth email/password**. The FE attaches `Authorization: Bearer <ID token>`; the API verifies with Firebase Admin (`api/auth.py`). Clinical data stays in BigQuery.
+Staff sign-in uses **Firebase Auth email/password and Google sign-in**. Both providers issue the same Firebase ID token; the FE attaches it as `Authorization: Bearer <ID token>` and the API verifies it with Firebase Admin (`api/auth.py`). Clinical data stays in BigQuery.
 
 #### Console (one-time)
 
 1. Open [Firebase Console](https://console.firebase.google.com/) → project **`swiftcare-patchamomma`** (same as GCP).
-2. **Build → Authentication → Get started → Sign-in method** → enable **Email/Password**.
+2. **Build → Authentication → Get started → Sign-in method** → enable **Email/Password** and **Google**. For Google, choose the project support email and save.
 3. **Project settings → Your apps → Add app → Web** → register e.g. `swiftcare-web`. Copy `apiKey`, `authDomain`, `projectId`, `appId`.
 4. **Authentication → Users → Add user** → create a staff email/password.
 5. Copy that user’s **User UID** for the access grant below.
-6. After Cloud Run exists: **Authentication → Settings → Authorized domains** → add the Cloud Run host (e.g. `swiftcare-api-xxxxx-el.a.run.app`).
+6. After Cloud Run exists: **Authentication → Settings → Authorized domains** → add the Cloud Run host (e.g. `swiftcare-api-xxxxx-el.a.run.app`). Google popup login will otherwise fail with `auth/unauthorized-domain`.
 
 #### Env (root `.env`)
 

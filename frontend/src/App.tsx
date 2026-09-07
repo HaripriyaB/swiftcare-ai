@@ -5,7 +5,8 @@ import { LoginPage } from './pages/LoginPage'
 import { HomePage } from './pages/HomePage'
 import { PatientPage } from './pages/PatientPage'
 import { InsightsPage } from './pages/InsightsPage'
-import { DoctorsPage } from './pages/DoctorsPage'
+import { ContinuityActionPage } from './pages/ContinuityActionPage'
+import { PatientsPage } from './pages/PatientsPage'
 import type { ReactNode } from 'react'
 
 function Protected({ children }: { children: ReactNode }) {
@@ -28,6 +29,9 @@ export default function App() {
           </Protected>
         }
       />
+      <Route path="/today" element={<Navigate to="/" replace />} />
+      <Route path="/continuity/:cardId" element={<Protected><ContinuityActionPage /></Protected>} />
+      <Route path="/patients" element={<Protected><PatientsPage /></Protected>} />
       <Route
         path="/patient/:patientId"
         element={
@@ -41,14 +45,6 @@ export default function App() {
         element={
           <Protected>
             <InsightsPage />
-          </Protected>
-        }
-      />
-      <Route
-        path="/doctors"
-        element={
-          <Protected>
-            <DoctorsPage />
           </Protected>
         }
       />

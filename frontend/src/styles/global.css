@@ -168,6 +168,51 @@ textarea {
   padding: 0.5rem 0;
 }
 
+.eyebrow { margin: 0 0 0.35rem; color: var(--sc-accent); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.continuity-page { max-width: 980px; width: 100%; }
+.continuity-page__intro h1 { margin: 0; font-family: var(--sc-font-display); font-size: clamp(2rem, 4vw, 3rem); }
+.continuity-page__intro p:last-child { margin: 0.45rem 0 0; max-width: 680px; }
+.continuity-page__summary { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.continuity-page__summary .chip { border: 1px solid transparent; cursor: pointer; }
+.continuity-page__summary .chip.selected { outline: 2px solid var(--sc-ink); outline-offset: 2px; }
+.continuity-page__heading { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-top: 0.5rem; }
+.continuity-page__heading h2 { margin: 0; font-family: var(--sc-font-display); }
+.continuity-page__heading p { margin: 0.15rem 0 0; font-size: 0.85rem; }
+.continuity-page__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
+.continuity-card { background: var(--sc-surface); border: 1px solid var(--sc-border); border-radius: var(--sc-radius); box-shadow: var(--sc-shadow); padding: 1rem; display: flex; flex-direction: column; align-items: flex-start; }
+.continuity-card__top { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.8rem; }
+.continuity-card h2 { margin: 0.8rem 0 0.15rem; font-family: var(--sc-font-display); font-size: 1.3rem; }
+.continuity-card__action { margin: 0; color: var(--sc-accent); font-weight: 700; }
+.continuity-card__evidence { margin: 0.25rem 0 1rem; padding-left: 1.15rem; color: var(--sc-muted); font-size: 0.9rem; }
+.continuity-card__button { margin-top: auto; text-decoration: none; }
+.continuity-page__error { border-color: var(--sc-high); }
+.action-detail { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 0.9rem; }
+.action-detail__back { align-self: flex-start; font-size: 0.9rem; }
+.action-detail__heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+.action-detail h1 { margin: 0.45rem 0 0; font-family: var(--sc-font-display); font-size: 2.1rem; }
+.action-detail__action { margin: 0.15rem 0 0; color: var(--sc-accent); font-weight: 700; }
+.action-detail__primary p { margin: 0.25rem 0; }
+.action-detail__evidence { list-style: none; padding: 0; margin: 0; }
+.action-detail__evidence li { display: grid; gap: 0.15rem; padding: 0.65rem 0; border-bottom: 1px solid var(--sc-border); }
+.action-detail__evidence li:last-child { border-bottom: 0; }
+.action-detail__evidence small { color: var(--sc-muted); }
+.action-detail__outcome { display: grid; gap: 0.7rem; }
+.action-detail__outcome h2 { margin: 0; }
+.action-detail__outcome p { margin: 0; }
+.action-detail__outcome textarea { min-height: 4rem; resize: vertical; }
+.action-detail__error { color: var(--sc-high); }
+.google-signin { display: flex; align-items: center; justify-content: center; gap: 0.6rem; min-height: 44px; font-weight: 600; }
+.google-signin span { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; border-radius: 50%; color: #fff; background: #4285f4; font-size: 0.8rem; font-weight: 800; }
+.login-divider { display: flex; align-items: center; gap: 0.75rem; color: var(--sc-muted); font-size: 0.8rem; }
+.login-divider::before, .login-divider::after { content: ''; height: 1px; background: var(--sc-border); flex: 1; }
+.patient-search { max-width: 760px; width: 100%; }
+.patient-search h1 { margin: 0; font-family: var(--sc-font-display); font-size: 2.2rem; }
+.patient-search p { margin: 0.35rem 0 0; }
+.patient-search__form { display: flex; align-items: end; gap: 0.75rem; }
+.patient-search__form label { flex: 1; }
+@media (max-width: 680px) { .patient-search__form { align-items: stretch; flex-direction: column; } }
+@media (max-width: 680px) { .continuity-page__grid { grid-template-columns: 1fr; } }
+
 /* App shell */
 .app-header {
   display: flex;

@@ -6,7 +6,7 @@ import os
 
 from fastapi import HTTPException, status
 
-from api.auth import CurrentUser
+from api.auth import CurrentUser, auth_bypass_enabled
 from api.bq import fq, run_query
 from api import local_demo
 
@@ -52,6 +52,8 @@ LIMIT 1
 def require_patient_access(
     user: CurrentUser, patient_id: str, *, action: str = "read"
 ) -> None:
+    if auth_bypass_enabled() and user.user_id == "dev-user":
+        return
     if _production_authorization_enabled() and not _has_grant(
         user.user_id, patient_id, action
     ):
@@ -59,6 +61,8 @@ def require_patient_access(
 
 
 def require_population_access(user: CurrentUser, *, action: str = "read") -> None:
+    if auth_bypass_enabled() and user.user_id == "dev-user":
+        return
     if _production_authorization_enabled() and not _has_grant(
         user.user_id, None, action
     ):
