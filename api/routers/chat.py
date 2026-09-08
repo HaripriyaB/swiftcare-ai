@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 import re
 
 from fastapi import APIRouter, Depends
@@ -21,9 +21,10 @@ def _presentation_safe_reply(reply: str) -> str:
 
 
 class ChatBody(BaseModel):
-    message: str
-    patient_id: str | None = None
-    session_id: str | None = None
+  message: str
+  patient_id: str | None = None
+  session_id: str | None = None
+  mode: Literal["ask", "help", "learn"] = "ask"
 
 
 @router.post("/chat")
@@ -47,6 +48,7 @@ async def chat(
         user_id=user.user_id,
         patient_id=patient_id,
         session_id=session.get("session_id"),
+        mode=body.mode,
     )
     response["reply"] = _presentation_safe_reply(str(response.get("reply") or ""))
     return response

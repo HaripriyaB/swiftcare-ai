@@ -264,6 +264,7 @@ export interface ChatRequest {
   message: string
   patient_id?: string | null
   session_id?: string | null
+  mode?: 'ask' | 'help' | 'learn'
 }
 
 export interface ChatResponse {

@@ -6,7 +6,6 @@ import { ContinuityCard as ContinuityCardView } from '../components/ContinuityCa
 import { useAuth } from '../auth/useAuth'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { readPageMemory, writePageMemory } from '../utils/pageMemory'
-import { ChatPanel } from '../components/ChatPanel'
 
 type QueueView = { cards: ContinuityCard[]; summary: ContinuitySummary }
 type HomeSnapshot = { filter: string; views: Record<string, QueueView> }
@@ -99,7 +98,6 @@ export function HomePage() {
       <div className="continuity-page__grid">
         {cards.map((card) => <ContinuityCardView key={card.card_id} card={card} />)}
       </div>
-      <ChatPanel />
     </div>
   )
 }

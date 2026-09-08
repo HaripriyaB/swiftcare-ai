@@ -9,7 +9,6 @@ import {
 import type { AtRiskPatient, InsightAlert, RiskDistributionRow } from '../api/types'
 import { AtRiskTable } from '../components/AtRiskTable'
 import { InsightAlertStrip } from '../components/InsightAlertStrip'
-import { ChatPanel } from '../components/ChatPanel'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { CareSignalsDashboard, buildCareSignals } from '../components/CareSignalsDashboard'
 import { getContinuityHistory } from '../api/continuity'
@@ -122,7 +121,6 @@ export function InsightsPage() {
           }}
         />}
       </div>
-      <ChatPanel />
     </div>
   )
 }

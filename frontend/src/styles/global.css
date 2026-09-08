@@ -305,6 +305,8 @@ textarea {
 
 /* App shell */
 .app-shell { min-height: 100vh; display: flex; background: var(--sc-bg); }
+.app-shell__workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.app-shell__content { min-width: 0; flex: 1; display: flex; }
 .app-shell__body { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .app-sidebar {
   position: sticky;
@@ -366,6 +368,9 @@ textarea {
 .app-topbar__identity { display: flex; min-width: 0; align-items: center; gap: 0.65rem; }
 .app-topbar__identity > span { overflow: hidden; color: var(--sc-muted); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.01em; text-overflow: ellipsis; white-space: nowrap; }
 .app-topbar__user { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; }
+.app-topbar__logout { display: grid; width: 2rem; height: 2rem; place-items: center; padding: 0; border: 0; border-radius: 0.45rem; background: transparent; color: var(--sc-muted); }
+.app-topbar__logout svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.75; }
+.app-topbar__logout:hover { color: var(--sc-accent); background: var(--sc-accent-soft); }
 .account-settings { max-width: 720px; width: 100%; }
 .account-settings h1 { margin: 0; font-family: var(--sc-font-display); font-size: 2.2rem; }
 .account-settings h2 { margin: 0; font-size: 1.1rem; }
@@ -385,7 +390,7 @@ textarea {
 
 .request-buffer {
   position: fixed;
-  right: 1rem;
+  right: calc(340px + 1rem);
   top: 4.55rem;
   z-index: 100;
   display: grid;
@@ -424,6 +429,25 @@ body.is-requesting * {
 }
 .app-footer__inner > div { min-width: 0; overflow-wrap: anywhere; }
 
+/* Persistent Swify workspace rail */
+.swify-rail { position: sticky; top: 0; display: grid; flex: 0 0 340px; height: calc(100vh - 3.8rem); grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto; gap: 0.7rem; padding: 1rem; border-left: 1px solid var(--sc-border); background: #f2f6f0; box-sizing: border-box; }
+.swify-rail__header strong { display: block; font-family: var(--sc-font-display); font-size: 1.2rem; }
+.swify-rail__header span, .swify-rail__hint, .swify-rail__disclaimer { color: var(--sc-muted); font-size: 0.76rem; line-height: 1.4; }
+.swify-rail__header span { display: block; margin-top: 0.1rem; }
+.swify-rail__modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.25rem; padding: 0.2rem; border-radius: 0.55rem; background: rgba(255, 255, 255, 0.7); }
+.swify-rail__modes button { min-width: 0; padding: 0.4rem 0.2rem; border: 0; border-radius: 0.4rem; background: transparent; color: var(--sc-muted); font-size: 0.72rem; font-weight: 700; }
+.swify-rail__modes button.active { background: var(--sc-surface); color: var(--sc-ink); box-shadow: 0 1px 2px rgba(20, 42, 31, 0.1); }
+.swify-rail__hint { min-height: 2.2rem; margin: 0; }
+.swify-rail__resources { display: grid; gap: 0.25rem; padding: 0.65rem; border-radius: 0.55rem; background: var(--sc-accent-soft); font-size: 0.78rem; }
+.swify-rail__resources span { color: var(--sc-muted); font-weight: 700; }
+.swify-rail__resources a { font-weight: 650; }
+.swify-rail__messages { display: grid; align-content: start; gap: 0.5rem; min-height: 0; overflow: auto; }
+.swify-rail__message { max-width: 94%; padding: 0.5rem 0.65rem; border-radius: 0.55rem; font-size: 0.84rem; line-height: 1.45; overflow-wrap: anywhere; }
+.swify-rail__message.user { justify-self: end; background: var(--sc-accent-soft); }
+.swify-rail__message.assistant { background: var(--sc-surface-muted); }
+.swify-rail__loading { display: flex; align-items: center; gap: 0.45rem; color: var(--sc-muted); }
+.swify-rail__disclaimer { margin: 0; }
+
 /* Care Signals dashboard */
 .care-signals__intro h1 { margin: 0; font-family: var(--sc-font-display); font-size: clamp(2rem, 4vw, 3rem); }
 .care-signals__intro > p:last-child { max-width: 700px; margin: 0.4rem 0 0; }
@@ -460,12 +484,15 @@ body.is-requesting * {
 
 @media (max-width: 860px) {
   .app-shell { flex-direction: column; }
+  .app-shell__content { flex-direction: column; }
   .app-sidebar, .app-sidebar.is-collapsed { position: static; width: 100%; height: auto; flex-basis: auto; gap: 0.8rem; border-right: 0; border-bottom: 1px solid var(--sc-border); }
   .app-sidebar.is-collapsed .app-sidebar__nav { display: flex; }
   .app-sidebar.is-collapsed .app-sidebar__label { display: inline; }
   .app-sidebar.is-collapsed .app-sidebar__nav a { justify-content: flex-start; padding-inline: 0.55rem; }
   .app-sidebar__nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .app-sidebar__nav a { min-height: auto; padding: 0.35rem 0.55rem; }
+  .swify-rail { position: static; width: 100%; height: auto; min-height: 25rem; flex-basis: auto; border-top: 1px solid var(--sc-border); border-left: 0; }
+  .request-buffer { right: 1rem; }
   .home-layout {
     grid-template-columns: 1fr;
   }
@@ -533,10 +560,6 @@ body.is-requesting * {
   }
 }
 
-/* Fixed above the persistent clinic footer instead of covering it. */
-.swify-chat { bottom: 6.5rem; }
-.swify-chat__close { padding: 0.1rem 0.45rem; border: 0; font-size: 1.4rem; line-height: 1; color: var(--sc-muted); }
-.swify-chat__close:hover { color: var(--sc-ink); background: var(--sc-surface-muted); }
 .swify-chat__composer { position: relative; display: flex; align-items: center; }
 .swify-chat__composer input { width: 100%; padding-right: 4.5rem; }
 .swify-chat__composer-actions { position: absolute; right: 0.3rem; display: flex; align-items: center; gap: 0.1rem; }
@@ -547,7 +570,6 @@ body.is-requesting * {
 .swify-chat__icon-button.is-listening { color: #bd4b49; background: #fae3e1; }
 
 @media (max-width: 680px) {
-  .swify-chat { bottom: 10.5rem; right: 0.75rem !important; }
 }
 
 /* Login */

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from typing import Any
 
@@ -22,7 +23,7 @@ DISMISS_REASONS = {"ALREADY_HANDLED", "NOT_APPLICABLE", "DUPLICATE", "OTHER"}
 # The continuity queue is operational data, not a live clinical monitor. Keep
 # a short-lived shared snapshot so switching views is instant and BigQuery is
 # not queried on every navigation. Writes clear the snapshot immediately.
-_CACHE_SECONDS = 120
+_CACHE_SECONDS = int(os.getenv("CONTINUITY_QUEUE_CACHE_SECONDS", "180"))
 _cache: dict[str, tuple[float, Any]] = {}
 
 
@@ -67,15 +68,31 @@ def get_queue_snapshot(
     limit: int,
 ) -> dict[str, Any]:
     key = f"snapshot:{priority}:{action_type}:{status}:{limit}"
-    return _cached(
-        key,
-        lambda: _queue_snapshot(
-            priority=priority,
-            action_type=action_type,
-            status=status,
-            limit=limit,
-        ),
+    started_at = time.perf_counter()
+    hit = _cache.get(key)
+    if hit and time.monotonic() - hit[0] < _CACHE_SECONDS:
+        snapshot = dict(hit[1])
+        snapshot["cache"] = {
+            "source": "memory",
+            "age_ms": round((time.monotonic() - hit[0]) * 1000),
+            "load_ms": round((time.perf_counter() - started_at) * 1000, 1),
+        }
+        return snapshot
+
+    snapshot = _queue_snapshot(
+        priority=priority,
+        action_type=action_type,
+        status=status,
+        limit=limit,
     )
+    _cache[key] = (time.monotonic(), snapshot)
+    response = dict(snapshot)
+    response["cache"] = {
+        "source": "bigquery",
+        "age_ms": 0,
+        "load_ms": round((time.perf_counter() - started_at) * 1000, 1),
+    }
+    return response
 
 
 def _queue_snapshot(

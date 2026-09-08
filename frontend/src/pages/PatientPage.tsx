@@ -37,7 +37,6 @@ import { VitalsPanel } from '../components/chart/VitalsPanel'
 import { NextStepsPanel } from '../components/NextStepsPanel'
 import { InsightAlertStrip } from '../components/InsightAlertStrip'
 import { DownloadPatientDetails } from '../components/DownloadPatientDetails'
-import { ChatPanel } from '../components/ChatPanel'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { readPageMemory, writePageMemory } from '../utils/pageMemory'
 
@@ -287,7 +286,6 @@ export function PatientPage() {
         </div>
       ) : null}
 
-      <ChatPanel key={patientId} patientId={patientId} />
       </>}
     </div>
   )

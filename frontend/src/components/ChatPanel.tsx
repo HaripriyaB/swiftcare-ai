@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { sendChat } from '../api/chat'
 import type { ChatPatientRow, ChatResponse } from '../api/types'
 import { DownloadPatientsFromReply } from './DownloadPatientsFromReply'
@@ -22,6 +23,13 @@ type SpeechRecognizer = {
   stop: () => void
 }
 type SpeechRecognizerConstructor = new () => SpeechRecognizer
+type SwifyMode = 'ask' | 'help' | 'learn'
+
+const modes: Array<{ id: SwifyMode; label: string; hint: string }> = [
+  { id: 'ask', label: 'Ask', hint: 'Ask about a patient, follow-up, or today’s priorities.' },
+  { id: 'help', label: 'Help', hint: 'Ask how to use SwiftCare.' },
+  { id: 'learn', label: 'Learn', hint: 'Browse trusted health-information resources.' },
+]
 
 export function formatSwifyReply(text: string) {
   return text
@@ -40,18 +48,22 @@ export function ChatPanel({
   patientId?: string | null
   sessionId?: string | null
 }) {
-  const cacheKey = `swify:${patientId ?? 'workspace'}:${sessionId ?? 'default'}`
-  const restored = readPageMemory<{ open: boolean; input: string; msgs: Msg[] }>(cacheKey)
-  const [open, setOpen] = useState(() => restored?.open ?? false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const routePatientId = location.pathname.match(/^\/patient\/([^/]+)/)?.[1] ?? null
+  const activePatientId = patientId ?? routePatientId
+  const cacheKey = `swify:rail:${sessionId ?? 'default'}`
+  const restored = readPageMemory<{ input: string; msgs: Msg[] }>(cacheKey)
   const [input, setInput] = useState(() => restored?.input ?? '')
   const [msgs, setMsgs] = useState<Msg[]>(() => restored?.msgs ?? [])
+  const [mode, setMode] = useState<SwifyMode>('ask')
   const [busy, setBusy] = useState(false)
   const [listening, setListening] = useState(false)
   const recognitionRef = useRef<SpeechRecognizer | null>(null)
 
   useEffect(() => {
-    writePageMemory(cacheKey, { open, input, msgs })
-  }, [cacheKey, input, msgs, open])
+    writePageMemory(cacheKey, { input, msgs })
+  }, [cacheKey, input, msgs])
 
   useEffect(() => () => recognitionRef.current?.stop(), [])
 
@@ -63,12 +75,19 @@ export function ChatPanel({
     const message = input.trim()
     setInput('')
     setMsgs((m) => [...m, { role: 'user', text: message }])
+    const vaguePatientRequest = !activePatientId && /\b(patient details?|patient info|show (?:me )?(?:a )?patient|open (?:a )?chart)\b/i.test(message)
+    if (vaguePatientRequest) {
+      setMsgs((m) => [...m, { role: 'assistant', text: 'Let’s find the patient first, so I can use the correct chart.' }])
+      navigate('/patients')
+      return
+    }
     setBusy(true)
     try {
       const res: ChatResponse = await sendChat({
         message,
-        patient_id: patientId ?? null,
+        patient_id: activePatientId,
         session_id: sessionId ?? null,
+        mode,
       })
       setMsgs((m) => [
         ...m,
@@ -115,40 +134,23 @@ export function ChatPanel({
     recognition.start()
   }
 
+  const activeMode = modes.find((item) => item.id === mode) ?? modes[1]
+
   return (
-    <div
-      className="swify-chat"
-      style={{
-        position: 'fixed',
-        right: 16,
-        width: open ? 340 : 'auto',
-        zIndex: 20,
-      }}
-    >
-      {!open ? (
-        <button type="button" className="primary" onClick={() => setOpen(true)}>
-          Ask Swify
-        </button>
-      ) : (
-        <div className="panel stack" style={{ maxHeight: '70vh' }}>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <strong>Swify — the AI assistant</strong>
-            <button type="button" className="ghost swify-chat__close" onClick={() => setOpen(false)} aria-label="Close Swify">
-              ×
-            </button>
-          </div>
-          <p className="muted" style={{ fontSize: '0.75rem', margin: 0 }}>Grounded in the current patient record and operational data. Not for diagnosis or treatment.</p>
-          <div className="stack" style={{ overflow: 'auto', maxHeight: 280 }}>
+    <aside className="swify-rail" aria-label="Swify assistant">
+      <div className="swify-rail__header">
+        <div><strong>Swify</strong><span>Operations assistant</span></div>
+      </div>
+      <div className="swify-rail__modes" role="tablist" aria-label="Swify modes">
+        {modes.map((item) => <button key={item.id} type="button" role="tab" aria-selected={mode === item.id} className={mode === item.id ? 'active' : ''} onClick={() => setMode(item.id)}>{item.label}</button>)}
+      </div>
+      <p className="swify-rail__hint">{activeMode.hint}{activePatientId ? ' The open patient is included automatically.' : ''}</p>
+      {mode === 'learn' ? <div className="swify-rail__resources"><span>Trusted health information</span><a href="https://medlineplus.gov/" target="_blank" rel="noreferrer">MedlinePlus ↗</a><a href="https://www.cdc.gov/" target="_blank" rel="noreferrer">CDC ↗</a></div> : null}
+      <div className="swify-rail__messages">
             {msgs.map((m, i) => (
               <div
                 key={i}
-                style={{
-                  alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                  background:
-                    m.role === 'user' ? 'var(--sc-accent-soft)' : 'var(--sc-surface-muted)',
-                  padding: '0.5rem 0.65rem',
-                  borderRadius: 8,
-                }}
+                className={`swify-rail__message ${m.role}`}
               >
                 <div>{m.text}</div>
                 {m.patients?.length ? (
@@ -156,13 +158,14 @@ export function ChatPanel({
                 ) : null}
               </div>
             ))}
-          </div>
-          <form className="swify-chat__composer" onSubmit={(e) => void send(e)}>
+            {busy ? <div className="swify-rail__message assistant swify-rail__loading" role="status"><span className="inline-loader__spinner" aria-hidden="true" />Swify is thinking…</div> : null}
+      </div>
+      <form className="swify-chat__composer" onSubmit={(e) => void send(e)}>
             <input
               aria-label="Chat message"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about follow-ups, medications, or recent visits…"
+              placeholder={activeMode.hint}
             />
             <div className="swify-chat__composer-actions">
               <button
@@ -179,9 +182,8 @@ export function ChatPanel({
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m4 4 16 8-16 8 3-8-3-8Z" /><path d="M7 12h13" /></svg>
               </button>
             </div>
-          </form>
-        </div>
-      )}
-    </div>
+      </form>
+      <p className="swify-rail__disclaimer">Operational support only. Swify does not diagnose or prescribe.</p>
+    </aside>
   )
 }

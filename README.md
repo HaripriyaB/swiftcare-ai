@@ -73,6 +73,30 @@ All clinical reads use **guarded, parameterized SQL** against allowlisted BigQue
 
 **Auth model:** Firebase Authentication issues identity only. FastAPI verifies the Bearer ID token (`api/auth.py`). Patient/population authorization is a separate BigQuery table (`swiftcare_ops.patient_access_grants`). Clinical data never lives in Firestore.
 
+### Swify persistent workspace rail
+
+Swify is available on every signed-in screen as a contextual right rail, not as a page-specific chatbot. It has four modes:
+
+| Mode | Purpose | Context |
+| ---- | ------- | ------- |
+| Ask | Ask about the currently open patient record, queue priorities, and care gaps | Patient ID is automatically passed when a patient workspace is open. Generic patient-detail requests open Find a Patient first. |
+| Help | Learn how to use SwiftCare workflows | Product guidance; no clinical advice. |
+| Learn | Open trusted public health learning resources | MedlinePlus and CDC links; not a diagnostic tool. |
+
+Swify continues to enforce the existing guardrail: it can retrieve chart information and operational context, but never diagnoses, prescribes, or replaces care-team judgment.
+
+### Queue performance and cache behavior
+
+The attention queue is cached at two layers: the browser retains recent queue responses for 45 seconds and the API keeps a shared in-memory snapshot for 180 seconds (configure with `CONTINUITY_QUEUE_CACHE_SECONDS`). Queue-changing writes immediately clear the server cache.
+
+`GET /api/v1/continuity/queue` includes a `cache` object in its response for safe demo verification:
+
+```json
+{ "source": "memory", "age_ms": 4200, "load_ms": 0.1 }
+```
+
+`source: "bigquery"` marks a cache miss; subsequent matching requests should report `source: "memory"` with a much lower `load_ms`. This makes the live performance improvement measurable without exposing clinical data.
+
 ---
 
 ## Deployment targets (this project)

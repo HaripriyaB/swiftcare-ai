@@ -4,6 +4,7 @@ import { useAuth } from '../auth/useAuth'
 import { subscribeToApiActivity } from '../api/client'
 import { DemoBanner } from './DemoBanner'
 import { BrandLockup } from './BrandLockup'
+import { ChatPanel } from './ChatPanel'
 
 const navigationItems = [
   { to: '/', label: 'Attention queue', icon: 'announcement', end: true },
@@ -78,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ) : null}
           </nav>
       </aside>
-      <div className="app-shell__body">
+      <div className="app-shell__workspace">
         <DemoBanner />
         <header className="app-topbar">
           <div className="app-topbar__brand">
@@ -89,30 +90,35 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="app-topbar__user">
             <span className="muted">{user?.email}</span>
-            <button type="button" className="ghost" onClick={() => void signOut()}>
-              Sign out
+            <button type="button" className="app-topbar__logout" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5M15 12H4" /></svg>
             </button>
           </div>
         </header>
-        {loading ? <span className="request-buffer" role="status" aria-label="Loading"><span className="inline-loader__spinner" aria-hidden="true" /></span> : null}
-        <main className="app-main">
-          {children}
-        </main>
-        <footer className="app-footer">
-          <div className="app-footer__inner">
-            <div>
-              <strong style={{ fontFamily: 'var(--sc-font-display)' }}>SwiftCare Clinic</strong>
-              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
-                Campus hours Mon–Fri 07:00–20:00 · Sat 08:00–14:00
-              </p>
-            </div>
-            <div className="muted" style={{ fontSize: '0.85rem' }}>
-              <div>Main desk · (617) 555-0140</div>
-              <div>Emergency · (617) 555-0911</div>
-            </div>
-            <div className="muted" style={{ fontSize: '0.85rem' }}>Synthetic demo data · Operational support only.</div>
+        <div className="app-shell__content">
+          <div className="app-shell__body">
+            {loading ? <span className="request-buffer" role="status" aria-label="Loading"><span className="inline-loader__spinner" aria-hidden="true" /></span> : null}
+            <main className="app-main">
+              {children}
+            </main>
+            <footer className="app-footer">
+              <div className="app-footer__inner">
+                <div>
+                  <strong style={{ fontFamily: 'var(--sc-font-display)' }}>SwiftCare Clinic</strong>
+                  <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
+                    Campus hours Mon–Fri 07:00–20:00 · Sat 08:00–14:00
+                  </p>
+                </div>
+                <div className="muted" style={{ fontSize: '0.85rem' }}>
+                  <div>Main desk · (617) 555-0140</div>
+                  <div>Emergency · (617) 555-0911</div>
+                </div>
+                <div className="muted" style={{ fontSize: '0.85rem' }}>Synthetic demo data · Operational support only.</div>
+              </div>
+            </footer>
           </div>
-        </footer>
+          <ChatPanel />
+        </div>
       </div>
     </div>
   )

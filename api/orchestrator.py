@@ -158,7 +158,22 @@ async def handle_chat(
     user_id: str,
     patient_id: str | None,
     session_id: str | None = None,
+    mode: str = "ask",
 ) -> dict[str, Any]:
+    if mode == "help":
+        return {
+            "reply": "Use Attention queue to work prioritized follow-ups, Find a patient to search charts, Care dashboard for operational patterns, and Work history for the audit trail. Ask me if you want help with a specific step.",
+            "agent_type": "help",
+            "patient_id": patient_id,
+            "citations": [], "cards": [], "alerts": [], "patients": [],
+        }
+    if mode == "learn":
+        return {
+            "reply": "I can help interpret information already in SwiftCare. For general public health education, use the trusted resources shown above. Clinical decisions remain with the care team.",
+            "agent_type": "learn",
+            "patient_id": patient_id,
+            "citations": [], "cards": [], "alerts": [], "patients": [],
+        }
     if should_refuse_clinical(message):
         return {
             "reply": (

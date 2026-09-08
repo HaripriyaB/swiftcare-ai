@@ -9,7 +9,6 @@ import { readPageMemory, writePageMemory } from '../utils/pageMemory'
 import { downloadBlob, stamp } from '../utils/download'
 import { toCsv } from '../utils/toCsv'
 import { displayPatientName } from '../utils/displayPatientName'
-import { ChatPanel } from '../components/ChatPanel'
 
 type PatientSearchSnapshot = { query: string; matches: PatientMatch[] | null; recentSearches: string[] }
 const SEARCH_MEMORY_KEY = 'patient-search'
@@ -88,7 +87,6 @@ export function PatientsPage() {
         </div>
         <SearchResultsTable matches={matches} onSelect={(patient) => void select(patient)} />
       </div> : !loading ? <div className="panel"><p className="empty">Search by patient name to get started.</p></div> : null}
-      <ChatPanel />
     </section>
   )
 }
