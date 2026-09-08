@@ -4,18 +4,20 @@ import type { ContinuityCard, ContinuityHistoryEntry, ContinuityHistoryResponse,
 const CLIENT_CACHE_MS = 45_000
 const queueCache = new Map<string, { loadedAt: number; value: ContinuityQueueResponse & { summary: ContinuitySummary } }>()
 
-export function getContinuityQueue(priority?: string) {
+export function getContinuityQueue(priority?: string, actionType?: string) {
   const query = new URLSearchParams({ status: 'OPEN', limit: '8' })
   if (priority) query.set('priority', priority)
+  if (actionType) query.set('action_type', actionType)
   return apiFetch<ContinuityQueueResponse>(`/continuity/queue?${query}`)
 }
 
-export function getAttentionQueue(priority?: string, refresh = false) {
-  const key = priority || 'all'
+export function getAttentionQueue(priority?: string, actionType?: string, refresh = false) {
+  const key = `${priority || 'all'}:${actionType || 'all'}`
   const cached = queueCache.get(key)
   if (!refresh && cached && Date.now() - cached.loadedAt < CLIENT_CACHE_MS) return Promise.resolve(cached.value)
   const query = new URLSearchParams({ status: 'OPEN', limit: '8' })
   if (priority) query.set('priority', priority)
+  if (actionType) query.set('action_type', actionType)
   return apiFetch<ContinuityQueueResponse & { summary: ContinuitySummary }>(`/continuity/queue?${query}`).then((value) => {
     queueCache.set(key, { loadedAt: Date.now(), value })
     return value

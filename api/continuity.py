@@ -51,18 +51,48 @@ def _hydrate(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_cards(*, priority: str | None, status: str | None, limit: int) -> list[dict[str, Any]]:
-    return get_queue_snapshot(priority=priority, status=status, limit=limit)["cards"]
+    return get_queue_snapshot(
+        priority=priority,
+        action_type=None,
+        status=status,
+        limit=limit,
+    )["cards"]
 
 
-def get_queue_snapshot(*, priority: str | None, status: str | None, limit: int) -> dict[str, Any]:
-    key = f"snapshot:{priority}:{status}:{limit}"
-    return _cached(key, lambda: _queue_snapshot(priority=priority, status=status, limit=limit))
+def get_queue_snapshot(
+    *,
+    priority: str | None,
+    action_type: str | None,
+    status: str | None,
+    limit: int,
+) -> dict[str, Any]:
+    key = f"snapshot:{priority}:{action_type}:{status}:{limit}"
+    return _cached(
+        key,
+        lambda: _queue_snapshot(
+            priority=priority,
+            action_type=action_type,
+            status=status,
+            limit=limit,
+        ),
+    )
 
 
-def _queue_snapshot(*, priority: str | None, status: str | None, limit: int) -> dict[str, Any]:
+def _queue_snapshot(
+    *,
+    priority: str | None,
+    action_type: str | None,
+    status: str | None,
+    limit: int,
+) -> dict[str, Any]:
     """Load cards and priority totals in one BigQuery read."""
     status = status or "OPEN"
-    params: dict[str, Any] = {"limit": min(max(limit, 1), 50), "status": status, "priority": priority}
+    params: dict[str, Any] = {
+        "limit": min(max(limit, 1), 50),
+        "status": status,
+        "priority": priority,
+        "action_type": action_type,
+    }
     sql = f"""
 WITH scoped AS (
   SELECT card_id, patient_id, patient_name, priority, priority_score, action_type,
@@ -72,6 +102,7 @@ WITH scoped AS (
          COUNTIF(priority = 'LOW') OVER() AS low_count
   FROM {fq('swiftcare_ops', 'continuity_cards')}
   WHERE status = @status
+    AND (@action_type IS NULL OR action_type = @action_type)
 )
 SELECT * EXCEPT(high_count, medium_count, low_count), high_count, medium_count, low_count
 FROM scoped
@@ -201,7 +232,12 @@ VALUES (GENERATE_UUID(), @card_id, @patient_id, @actor_user_id, @event_type, @ou
 
 
 def get_summary() -> dict[str, int]:
-    return get_queue_snapshot(priority=None, status="OPEN", limit=50)["summary"]
+    return get_queue_snapshot(
+        priority=None,
+        action_type=None,
+        status="OPEN",
+        limit=50,
+    )["summary"]
 
 
 def patient_context_fallback(patient_id: str) -> dict[str, Any] | None:

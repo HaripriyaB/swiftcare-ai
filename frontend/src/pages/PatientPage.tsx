@@ -56,6 +56,22 @@ type PatientSnapshot = {
   alerts: InsightAlert[]
 }
 
+type DetailLoading = Record<'symptoms' | 'outcomes' | 'nextSteps' | 'meds' | 'allergies' | 'visits' | 'timeline' | 'vitals' | 'alerts', boolean>
+
+function detailLoading(value: boolean): DetailLoading {
+  return {
+    symptoms: value,
+    outcomes: value,
+    nextSteps: value,
+    meds: value,
+    allergies: value,
+    visits: value,
+    timeline: value,
+    vitals: value,
+    alerts: value,
+  }
+}
+
 export function PatientPage() {
   const { patientId = '' } = useParams()
   const cacheKey = `patient:${patientId}`
@@ -72,6 +88,7 @@ export function PatientPage() {
   const [vitals, setVitals] = useState<Vitals | null>(() => restored?.vitals ?? null)
   const [alerts, setAlerts] = useState<InsightAlert[]>(() => restored?.alerts ?? [])
   const [loading, setLoading] = useState(() => !restored)
+  const [detailsLoading, setDetailsLoading] = useState<DetailLoading>(() => detailLoading(!restored))
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -81,46 +98,39 @@ export function PatientPage() {
       setTab(cached.tab); setSummary(cached.summary); setSymptoms(cached.symptoms)
       setOutcomes(cached.outcomes); setNextSteps(cached.nextSteps); setMeds(cached.meds)
       setAllergies(cached.allergies); setVisits(cached.visits); setTimeline(cached.timeline)
-      setVitals(cached.vitals); setAlerts(cached.alerts); setLoading(false); setError(null)
+      setVitals(cached.vitals); setAlerts(cached.alerts); setLoading(false); setDetailsLoading(detailLoading(false)); setError(null)
       return
     }
     if (!patientId) return
     let active = true
     setTab('overview'); setSummary(null); setSymptoms([]); setOutcomes([]); setNextSteps([])
     setMeds([]); setAllergies([]); setVisits([]); setTimeline([]); setVitals(null); setAlerts([])
-    setLoading(true); setError(null)
+    setLoading(true); setDetailsLoading(detailLoading(true)); setError(null)
     void (async () => {
+      // Begin every read immediately. Each visible section updates as soon as
+      // its own response arrives, rather than waiting for another chart panel.
+      const summaryRequest = getSummary(patientId)
+      const loadDetail = <T,>(key: keyof DetailLoading, request: Promise<T>, setter: (value: T) => void) => {
+        void request
+          .then((value) => { if (active) setter(value) })
+          .catch(() => undefined)
+          .finally(() => {
+            if (active) setDetailsLoading((current) => ({ ...current, [key]: false }))
+          })
+      }
+      loadDetail('symptoms', listSymptoms(patientId), setSymptoms)
+      loadDetail('outcomes', getConditions(patientId), setOutcomes)
+      loadDetail('nextSteps', listAdvisoryCards(patientId), setNextSteps)
+      loadDetail('meds', getMedications(patientId), setMeds)
+      loadDetail('allergies', getAllergies(patientId), setAllergies)
+      loadDetail('visits', getVisits(patientId), setVisits)
+      loadDetail('timeline', getTimeline(patientId), setTimeline)
+      loadDetail('vitals', getVitals(patientId), setVitals)
+      loadDetail('alerts', listInsightAlerts({ patient_id: patientId }), setAlerts)
       try {
-        // Load the header first. One failed secondary panel must never turn the
-        // whole patient page into a blank/error state.
-        const s = await getSummary(patientId)
+        const s = await summaryRequest
         if (!active) return
         setSummary(s)
-        const results = await Promise.allSettled([
-          listSymptoms(patientId),
-          getConditions(patientId),
-          listAdvisoryCards(patientId),
-          getMedications(patientId),
-          getAllergies(patientId),
-          getVisits(patientId),
-          getTimeline(patientId),
-          getVitals(patientId),
-          listInsightAlerts({ patient_id: patientId }),
-        ])
-        if (!active) return
-        const setIfReady = <T,>(index: number, setter: (value: T) => void) => {
-          const result = results[index]
-          if (result.status === 'fulfilled') setter(result.value as T)
-        }
-        setIfReady<Symptom[]>(0, setSymptoms)
-        setIfReady<DiagnosticOutcome[]>(1, setOutcomes)
-        setIfReady<AdvisoryCard[]>(2, setNextSteps)
-        setIfReady<Medication[]>(3, setMeds)
-        setIfReady<Allergy[]>(4, setAllergies)
-        setIfReady<Visit[]>(5, setVisits)
-        setIfReady<TimelineEvent[]>(6, setTimeline)
-        setIfReady<Vitals>(7, setVitals)
-        setIfReady<InsightAlert[]>(8, setAlerts)
       } catch {
         if (active) setError('Could not load patient')
       } finally {
@@ -183,7 +193,7 @@ export function PatientPage() {
             timeline={timeline}
             vitals={vitals}
             alerts={alerts}
-            disabled={!summary}
+            disabled={!summary || Object.values(detailsLoading).some(Boolean)}
           />
         </div>
       </div>
@@ -215,20 +225,15 @@ export function PatientPage() {
 
       {tab === 'overview' ? (
         <div className="stack">
-          <VitalsPanel vitals={vitals} />
+          <VitalsPanel vitals={vitals} loading={detailsLoading.vitals} />
           <div className="panel row" style={{ justifyContent: 'space-between' }}>
-            <span>
-              Open next steps:{' '}
-              <strong>{nextSteps.filter((c) => !c.dismissed).length}</strong>
-            </span>
-            <span>
-              Active symptoms: <strong>{symptoms.filter((s) => s.status === 'active').length}</strong>
-            </span>
+            {detailsLoading.nextSteps ? <span className="section-loading"><span className="inline-loader__spinner" aria-hidden="true" /> Loading next steps…</span> : <span>Open next steps: <strong>{nextSteps.filter((c) => !c.dismissed).length}</strong></span>}
+            {detailsLoading.symptoms ? <span className="section-loading"><span className="inline-loader__spinner" aria-hidden="true" /> Loading symptoms…</span> : <span>Active symptoms: <strong>{symptoms.filter((s) => s.status === 'active').length}</strong></span>}
           </div>
         </div>
       ) : null}
 
-      {tab === 'symptoms' ? (
+      {tab === 'symptoms' ? (detailsLoading.symptoms ? <LoadingPanel label="Loading reported symptoms…" /> : (
         <SymptomsPanel
           symptoms={symptoms}
           onAdd={async (description, reported_by: SymptomReportedBy) => {
@@ -246,12 +251,12 @@ export function PatientPage() {
             )
           }}
         />
-      ) : null}
+      )) : null}
 
-      {tab === 'outcomes' ? <DiagnosticOutcomesPanel outcomes={outcomes} /> : null}
+      {tab === 'outcomes' ? (detailsLoading.outcomes ? <LoadingPanel label="Loading documented conditions…" /> : <DiagnosticOutcomesPanel outcomes={outcomes} />) : null}
 
       {tab === 'next' ? (
-        <NextStepsPanel
+        detailsLoading.nextSteps ? <LoadingPanel label="Loading next steps…" /> : <NextStepsPanel
           cards={nextSteps}
           onDismiss={(id) => {
             void dismissAdvisoryCard(patientId, id).then(() => {
@@ -265,11 +270,11 @@ export function PatientPage() {
 
       {tab === 'more' ? (
         <div className="stack">
-          <MedicationsPanel items={meds} />
-          <AllergiesPanel items={allergies} />
-          <VisitsPanel items={visits} />
-          <TimelinePanel items={timeline} />
-          <InsightAlertStrip
+          {detailsLoading.meds ? <LoadingPanel label="Loading medications…" /> : <MedicationsPanel items={meds} />}
+          {detailsLoading.allergies ? <LoadingPanel label="Loading allergies…" /> : <AllergiesPanel items={allergies} />}
+          {detailsLoading.visits ? <LoadingPanel label="Loading visit history…" /> : <VisitsPanel items={visits} />}
+          {detailsLoading.timeline ? <LoadingPanel label="Loading timeline…" /> : <TimelinePanel items={timeline} />}
+          {detailsLoading.alerts ? <LoadingPanel label="Loading patient signals…" /> : <InsightAlertStrip
             alerts={alerts}
             onDismiss={(id) => {
               void dismissInsightAlert(id).then(() => {
@@ -278,7 +283,7 @@ export function PatientPage() {
                 )
               })
             }}
-          />
+          />}
         </div>
       ) : null}
 

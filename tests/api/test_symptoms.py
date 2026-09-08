@@ -3,6 +3,12 @@ from unittest.mock import patch
 from api import symptoms as symptoms_mod
 
 
+def test_staff_display_hides_internal_firebase_uid():
+    assert symptoms_mod._staff_display("dev-user") == "dev-user@local"
+    assert symptoms_mod._staff_display("FOPXzpS2aTPcBww7KPv7ekl772L2") == "Signed-in staff"
+    assert symptoms_mod._staff_display(None) is None
+
+
 def test_list_symptoms_mocked(client, auth_headers):
     rows = [
         {

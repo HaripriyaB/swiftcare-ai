@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 type BrandLockupProps = {
   /** When null/empty, renders a non-linking lockup (e.g. login). */
   to?: string | null
-  size?: 'sm' | 'lg'
+  size?: 'sm' | 'md' | 'lg'
   showWordmark?: boolean
 }
 
@@ -12,8 +12,8 @@ export function BrandLockup({
   size = 'sm',
   showWordmark = true,
 }: BrandLockupProps) {
-  const logoPx = size === 'lg' ? 48 : 32
-  const fontSize = size === 'lg' ? '1.85rem' : '1.35rem'
+  const logoPx = size === 'lg' ? 48 : size === 'md' ? 40 : 32
+  const fontSize = size === 'lg' ? '1.85rem' : size === 'md' ? '1.6rem' : '1.35rem'
 
   const inner = (
     <span
@@ -21,7 +21,7 @@ export function BrandLockup({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: size === 'lg' ? '0.85rem' : '0.55rem',
+        gap: size === 'lg' ? '0.85rem' : size === 'md' ? '0.7rem' : '0.55rem',
         color: 'var(--sc-ink)',
         textDecoration: 'none',
       }}

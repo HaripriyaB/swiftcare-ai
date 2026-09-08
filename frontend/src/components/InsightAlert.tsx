@@ -24,8 +24,13 @@ export function InsightAlertRow({
           <span title={oneLine !== alert.message ? alert.message : undefined}>{oneLine}</span>
         </p>
       </div>
-      <button type="button" aria-label={`Dismiss insight ${label}`} onClick={() => onDismiss(alert.alert_id)}>
-        Dismiss
+      <button
+        type="button"
+        className="ghost insight-alert__acknowledge"
+        aria-label={`Acknowledge signal ${label}`}
+        onClick={() => onDismiss(alert.alert_id)}
+      >
+        Acknowledge
       </button>
     </div>
   )
@@ -34,9 +39,11 @@ export function InsightAlertRow({
 export function InsightAlertStrip({
   alerts,
   onDismiss,
+  title = 'New signals',
 }: {
   alerts: InsightAlert[]
   onDismiss: (id: string) => void
+  title?: string
 }) {
   const open = alerts.filter((a) => !a.dismissed)
   const [showAll, setShowAll] = useState(false)
@@ -44,9 +51,9 @@ export function InsightAlertStrip({
 
   return (
     <section className="panel stack">
-      <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Insights</h2>
+      <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{title}</h2>
       {!shown.length ? (
-        <p className="empty">No open insight alerts.</p>
+        <p className="empty">No new signals to acknowledge.</p>
       ) : (
         shown.map((a) => (
           <InsightAlertRow key={a.alert_id} alert={a} onDismiss={onDismiss} />

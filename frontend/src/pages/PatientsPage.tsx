@@ -6,6 +6,10 @@ import type { PatientMatch } from '../api/types'
 import { SearchResultsTable } from '../components/SearchResultsTable'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { readPageMemory, writePageMemory } from '../utils/pageMemory'
+import { downloadBlob, stamp } from '../utils/download'
+import { toCsv } from '../utils/toCsv'
+import { displayPatientName } from '../utils/displayPatientName'
+import { ChatPanel } from '../components/ChatPanel'
 
 type PatientSearchSnapshot = { query: string; matches: PatientMatch[] | null; recentSearches: string[] }
 const SEARCH_MEMORY_KEY = 'patient-search'
@@ -52,6 +56,19 @@ export function PatientsPage() {
     nav(`/patient/${patient.patient_id}`)
   }
 
+  const downloadResults = () => {
+    if (!matches?.length) return
+    const rows = matches.map((patient) => ({
+      patient_id: patient.patient_id,
+      patient_name: displayPatientName(patient.display_first_name ?? patient.first_name, patient.display_last_name ?? patient.last_name),
+      location: [patient.city, patient.state].filter(Boolean).join(', '),
+      matched_on: patient.matched_on ?? '',
+      last_visit_date: patient.last_visit_date ?? '',
+      age_years: patient.age_years ?? '',
+    }))
+    downloadBlob(`swiftcare-patient-search-${stamp()}.csv`, new Blob([toCsv(rows)], { type: 'text/csv' }))
+  }
+
   return (
     <section className="patient-search stack">
       <div><p className="eyebrow">Patient lookup</p><h1>Find a patient</h1><p className="muted">Search by name, location, symptom, condition, medication, allergy, or another chart attribute.</p></div>
@@ -62,7 +79,16 @@ export function PatientsPage() {
       {recentSearches.length ? <div className="patient-search__recent"><div className="row" style={{ justifyContent: 'space-between' }}><span className="muted">Recent searches</span><button type="button" className="ghost" onClick={() => { setRecentSearches([]); remember(query, matches, []) }}>Clear</button></div><div className="row">{recentSearches.map((term) => <button key={term} type="button" className="chip" onClick={() => void runSearch(term)}>{term}</button>)}</div></div> : null}
       {error ? <div className="panel continuity-page__error"><strong>Search unavailable</strong><p>{error}</p></div> : null}
       {loading && !matches ? <LoadingPanel label="Searching patient records…" /> : null}
-      {matches ? <div className="panel"><SearchResultsTable matches={matches} onSelect={(patient) => void select(patient)} /></div> : !loading ? <div className="panel"><p className="empty">Search by patient name to get started.</p></div> : null}
+      {matches ? <div className="panel">
+        <div className="patient-search__results-header">
+          <div><h2>Search results</h2><p className="muted">{matches.length} {matches.length === 1 ? 'patient' : 'patients'} found</p></div>
+          {matches.length ? <button type="button" className="patient-search__download" aria-label="Download search results as CSV" title="Download search results as CSV" onClick={downloadResults}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" /></svg>
+          </button> : null}
+        </div>
+        <SearchResultsTable matches={matches} onSelect={(patient) => void select(patient)} />
+      </div> : !loading ? <div className="panel"><p className="empty">Search by patient name to get started.</p></div> : null}
+      <ChatPanel />
     </section>
   )
 }

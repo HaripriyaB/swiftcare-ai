@@ -17,6 +17,20 @@ SELECT patient_id, event_date, event_type, event_label, source_id, encounter_id 
   FROM `swiftcare-patchamomma.swiftcare_fhir_analytics.fact_medications`
 );
 
+-- Curated vital-sign evidence for non-diagnostic staff search.  This view is
+-- intentionally separate from v_patient_timeline, whose contract has no
+-- numeric value field.
+CREATE OR REPLACE VIEW `swiftcare-patchamomma.swiftcare_fhir_views.v_patient_temperature_observations` AS
+SELECT
+  patient_id,
+  observation_id,
+  observation_date,
+  value_numeric AS temperature_celsius,
+  units
+FROM `swiftcare-patchamomma.swiftcare_fhir_analytics.fact_observations`
+WHERE observation_code = '8331-1'
+  AND value_numeric IS NOT NULL;
+
 CREATE OR REPLACE VIEW `swiftcare-patchamomma.swiftcare_fhir_views.v_active_medications` AS
 SELECT patient_id, medication_id, medication_code, medication_desc AS medication_name,
        start_date AS prescribed_date, status

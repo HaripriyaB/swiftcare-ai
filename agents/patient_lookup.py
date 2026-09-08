@@ -17,9 +17,31 @@ RunQuery = Callable[..., tuple[list[dict[str, Any]], int, int]]
 Fq = Callable[[str, str], str]
 LogToolCall = Callable[..., None]
 
+_ELEVATED_TEMPERATURE_QUERIES = frozenset(
+    {
+        "fever",
+        "fevers",
+        "feverish",
+        "high fever",
+        "high temperature",
+        "elevated temperature",
+        "raised temperature",
+    }
+)
+
 
 def _tokens(text: str) -> list[str]:
     return [t for t in re.split(r"\s+", text.strip()) if t]
+
+
+def _is_elevated_temperature_query(text: str) -> bool:
+    """Return whether a staff search term means documented fever-range vitals.
+
+    This is deliberately a narrow, deterministic synonym map. It does not infer
+    a diagnosis: it only finds charted oral temperatures at or above 38°C.
+    """
+    normalized = " ".join(_tokens(text.lower()))
+    return normalized in _ELEVATED_TEMPERATURE_QUERIES
 
 
 def _cell(value: Any, empty: str = "—") -> str:
@@ -60,6 +82,7 @@ def format_matches_table(matches: list[dict[str, Any]]) -> str:
             "prefix_last": "Last name",
             "prefix_first": "First name",
             "exact_or_prefix_last": "Last name",
+            "elevated_temperature_recorded": "Elevated temperature recorded",
         }.get(str(matched), str(matched).replace("_", " ").title() or "—")
         lines.append(
             "| "
@@ -101,6 +124,18 @@ def search_patients_any_core(
 
     limit = int(os.getenv("SEARCH_RESULT_LIMIT", "20"))
     like = "CONCAT('%', @needle, '%')"
+    is_elevated_temperature = _is_elevated_temperature_query(needle)
+    temperature_search_sql = (
+        f"""
+  UNION ALL
+  SELECT patient_id, 'elevated_temperature_recorded', 270
+  FROM {fq("swiftcare_fhir_views", "v_patient_temperature_observations")}
+  WHERE temperature_celsius >= 38.0
+  GROUP BY patient_id
+"""
+        if is_elevated_temperature
+        else ""
+    )
     sql = f"""
 WITH base AS (
   SELECT patient_id, first_name, last_name, city, state, last_visit_date,
@@ -132,6 +167,7 @@ attribute_hits AS (
   FROM {fq("swiftcare_fhir_views", "v_patient_timeline")}
   WHERE event_type = 'observation' AND LOWER(COALESCE(event_label, '')) LIKE {like}
   GROUP BY patient_id
+{temperature_search_sql}
   UNION ALL
   SELECT patient_id, 'symptom', 210
   FROM {fq("swiftcare_ops", "patient_symptoms")}
@@ -178,7 +214,10 @@ LIMIT @limit
 """
     rows, row_count, latency_ms = run_query(
         sql,
-        {"needle": needle, "limit": limit},
+        {
+            "needle": needle,
+            "limit": limit,
+        },
     )
     if log_tool_call is not None:
         log_tool_call(

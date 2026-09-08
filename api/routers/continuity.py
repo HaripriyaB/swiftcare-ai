@@ -36,12 +36,18 @@ def _not_found() -> HTTPException:
 @router.get("/continuity/queue")
 def queue(
     priority: Literal["HIGH", "MEDIUM", "LOW"] | None = None,
+    action_type: str | None = None,
     status: Literal["OPEN", "IN_PROGRESS", "COMPLETED", "DISMISSED"] | None = "OPEN",
     limit: int = Query(8, ge=1, le=50),
     user: CurrentUser = Depends(get_current_user),
 ):
     require_population_access(user)
-    return continuity.get_queue_snapshot(priority=priority, status=status, limit=limit)
+    return continuity.get_queue_snapshot(
+        priority=priority,
+        action_type=action_type,
+        status=status,
+        limit=limit,
+    )
 
 
 @router.get("/continuity/summary")

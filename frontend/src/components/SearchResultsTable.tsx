@@ -29,12 +29,24 @@ export function SearchResultsTable({
         </tr>
       </thead>
       <tbody>
-            {matches.map((p) => (
+        {matches.map((p) => (
           <tr key={p.patient_id} onClick={() => onSelect(p)}>
-                <td>{displayName(p)}</td>
-                <td>{[p.city, p.state].filter(Boolean).join(', ') || '—'}</td>
-                <td>{formatOperationalLabel(p.matched_on) || '—'}</td>
-                <td>{p.last_visit_date ?? '—'}</td>
+            <td>
+              <button
+                type="button"
+                className="table__patient-link"
+                aria-label={`Open patient workspace for ${displayName(p)}`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onSelect(p)
+                }}
+              >
+                {displayName(p)}
+              </button>
+            </td>
+            <td>{[p.city, p.state].filter(Boolean).join(', ') || '—'}</td>
+            <td>{formatOperationalLabel(p.matched_on) || '—'}</td>
+            <td>{p.last_visit_date ?? '—'}</td>
             <td>{p.age_years ?? '—'}</td>
           </tr>
         ))}

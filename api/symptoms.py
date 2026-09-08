@@ -8,6 +8,15 @@ from typing import Any
 from api.bq import fq, run_dml, run_query
 
 
+def _staff_display(user_id: str | None) -> str | None:
+    """Keep internal Firebase identifiers out of staff-facing chart copy."""
+    if not user_id:
+        return None
+    if user_id == "dev-user":
+        return "dev-user@local"
+    return "Signed-in staff"
+
+
 def list_symptoms(
     patient_id: str,
     *,
@@ -32,10 +41,7 @@ ORDER BY recorded_at DESC
         sql, {"patient_id": patient_id, "active_only": active_only}
     )
     for row in rows:
-        uid = row.get("recorded_by_user_id")
-        row["recorded_by_display"] = (
-            "dev-user@local" if uid == "dev-user" else (uid or None)
-        )
+        row["recorded_by_display"] = _staff_display(row.get("recorded_by_user_id"))
     return rows
 
 
@@ -80,7 +86,7 @@ VALUES
         "description": desc,
         "reported_by": rb,
         "recorded_by_user_id": recorded_by_user_id,
-        "recorded_by_display": recorded_by_user_id,
+        "recorded_by_display": _staff_display(recorded_by_user_id),
         "status": "active",
         "recorded_at": None,
         "resolved_at": None,

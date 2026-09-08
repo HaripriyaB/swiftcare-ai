@@ -7,9 +7,13 @@ import { toCsv } from '../utils/toCsv'
 export function AtRiskTable({
   patients,
   onOpen,
+  title = 'Affected patients',
+  description,
 }: {
   patients: AtRiskPatient[]
   onOpen: (id: string) => void
+  title?: string
+  description?: string
 }) {
   const download = (format: ExportFormat) => {
     const rows = patients.map((p) => ({
@@ -36,7 +40,10 @@ export function AtRiskTable({
   return (
     <section className="panel stack">
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0, fontSize: '1.1rem' }}>At-risk patients</h2>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{title}</h2>
+          {description ? <p className="muted" style={{ margin: '0.2rem 0 0', fontSize: '0.86rem' }}>{description}</p> : null}
+        </div>
         {patients.length ? (
           <div className="row">
             <button type="button" aria-label="Download patients as JSON" onClick={() => download('json')}>

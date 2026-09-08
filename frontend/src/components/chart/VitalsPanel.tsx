@@ -1,6 +1,6 @@
 import type { Vitals } from '../../api/types'
 
-export function VitalsPanel({ vitals }: { vitals: Vitals | null }) {
+export function VitalsPanel({ vitals, loading = false }: { vitals: Vitals | null; loading?: boolean }) {
   const metrics = vitals ? [
     ['Blood pressure', vitals.systolic_bp != null && vitals.diastolic_bp != null ? `${vitals.systolic_bp}/${vitals.diastolic_bp} mmHg` : null],
     ['Heart rate', vitals.heart_rate != null ? `${vitals.heart_rate} bpm` : null],
@@ -10,6 +10,15 @@ export function VitalsPanel({ vitals }: { vitals: Vitals | null }) {
     ['BMI', vitals.bmi != null ? vitals.bmi.toFixed(1) : null],
   ].filter(([, value]) => value != null) : []
 
+  if (loading) return (
+    <section className="panel">
+      <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Vitals</h2>
+      <div className="inline-loader" role="status" aria-live="polite">
+        <span className="inline-loader__spinner" aria-hidden="true" />
+        <span>Loading latest recorded vitals…</span>
+      </div>
+    </section>
+  )
   if (!vitals || !metrics.length) return (
     <section className="panel">
       <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Vitals</h2>

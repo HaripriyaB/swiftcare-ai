@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { SearchResultsTable } from '../components/SearchResultsTable'
+import { formatSwifyReply } from '../components/ChatPanel'
 import { DiagnosticOutcomesPanel } from '../components/chart/DiagnosticOutcomesPanel'
 import { AdvisoryCardRow } from '../components/AdvisoryCard'
 import { InsightAlertRow } from '../components/InsightAlert'
+import { buildCareSignals } from '../components/CareSignalsDashboard'
 import { DownloadPatientsFromReply } from '../components/DownloadPatientsFromReply'
 import { buildPatientExport } from '../utils/buildPatientExport'
 import { DEFAULT_CARD_DISCLAIMER } from '../api/types'
@@ -25,6 +27,24 @@ describe('F1 display & guardrails', () => {
     render(<SearchResultsTable matches={matches} onSelect={() => undefined} />)
     expect(screen.getByText('Fannie Kuhn')).toBeInTheDocument()
     expect(screen.queryByText(/Fannie123/)).toBeNull()
+  })
+
+  it('F1-001b opens a patient workspace from a keyboard-accessible name control', () => {
+    const onSelect = vi.fn()
+    render(
+      <SearchResultsTable
+        matches={[{ patient_id: 'p1', first_name: 'Fannie123', last_name: 'Kuhn456' }]}
+        onSelect={onSelect}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open patient workspace for Fannie Kuhn' }))
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ patient_id: 'p1' }))
+  })
+
+  it('F1-001c presents Swify replies without raw markdown or internal source labels', () => {
+    expect(formatSwifyReply('**Medication**\n* Hydrochlorothiazide\n(source: mv_patient_latest_vitals)'))
+      .toBe('Medication\n• Hydrochlorothiazide')
   })
 
   it('F1-002 advisory shows disclaimer when expanded path has fallback', () => {
@@ -62,6 +82,19 @@ describe('F1 display & guardrails', () => {
       />,
     )
     expect(screen.getByText(/care gap/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /acknowledge signal/i })).toHaveTextContent('Acknowledge')
+  })
+
+  it('F1-003b groups operational patterns into Care Signals', () => {
+    const signals = buildCareSignals([
+      { risk_flag: 'gap_in_care', risk_level: 'HIGH', patient_count: 3 },
+      { risk_flag: 'gap_in_care', risk_level: 'LOW', patient_count: 2 },
+    ])
+    expect(signals.find((signal) => signal.flag === 'gap_in_care')).toMatchObject({
+      title: 'Follow-up windows missed',
+      patientCount: 5,
+      highCount: 3,
+    })
   })
 
   it('F1-008 conditions are read-only', () => {
