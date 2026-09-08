@@ -24,6 +24,7 @@ from api.access import audit_access, require_patient_access, require_population_
 from api.bq_conditions import list_conditions
 from api.export_builder import build_export_envelope, envelope_to_csv
 from api import symptoms as symptoms_mod
+from api import continuity
 from api import local_demo
 
 router = APIRouter(tags=["patients"])
@@ -58,7 +59,7 @@ def patients_search(
     require_population_access(user)
     if local_demo.enabled():
         return local_demo.search_patients(q)
-    result = search_patients(name=q)
+    result = search_patients(query=q)
     if "error" in result and result.get("match_count", 0) == 0 and not q.strip():
         return result
     return {
@@ -82,6 +83,11 @@ def patient_summary(
         if local_demo.enabled()
         else get_patient_summary(patient_id)
     )
+    if not row:
+        # A materialized FHIR view can lag a newly-created demo queue item.
+        # Keep operational work usable with a clearly limited fallback instead
+        # of making the entire patient workspace appear missing.
+        row = continuity.patient_context_fallback(patient_id)
     if not row:
         raise _err(404, "not_found", "Patient not found")
     audit_access(user, patient_id, "view_summary")

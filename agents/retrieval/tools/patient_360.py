@@ -37,4 +37,11 @@ LIMIT 1
         row_count=row_count,
         latency_ms=latency_ms,
     )
-    return with_display_names(rows[0]) if rows else None
+    if not rows:
+        return None
+    summary = with_display_names(rows[0])
+    # The UI contract uses display_* fields, while keeping the cleaned source
+    # name fields for agents and exports that already rely on them.
+    summary["display_first_name"] = summary.get("first_name")
+    summary["display_last_name"] = summary.get("last_name")
+    return summary

@@ -9,6 +9,7 @@ import uuid
 from typing import Any, Literal
 
 from api import local_demo
+from agents.display_names import display_person_name
 
 AgentType = Literal["retrieval", "suggestion", "insights"]
 
@@ -132,10 +133,12 @@ def _extract_patients_from_insights(limit: int = 10) -> list[dict[str, Any]]:
             out.append(
                 {
                     "patient_id": p.get("patient_id"),
-                    "display_first_name": p.get("display_first_name")
-                    or p.get("first_name"),
-                    "display_last_name": p.get("display_last_name")
-                    or p.get("last_name"),
+                    "display_first_name": display_person_name(
+                        p.get("display_first_name") or p.get("first_name")
+                    ),
+                    "display_last_name": display_person_name(
+                        p.get("display_last_name") or p.get("last_name")
+                    ),
                     "risk_flag": p.get("risk_flag"),
                     "risk_level": p.get("risk_level"),
                     "days_since_last_visit": p.get("days_since_last_visit"),

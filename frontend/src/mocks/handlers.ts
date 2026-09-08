@@ -79,8 +79,13 @@ export const handlers = [
     if (err) return err
     const q = new URL(request.url).searchParams.get('q')?.toLowerCase() ?? ''
     const matches = (patients as PatientMatch[]).filter((p) => {
-      const name = `${p.display_first_name} ${p.display_last_name} ${p.first_name} ${p.last_name}`.toLowerCase()
-      return !q || name.includes(q)
+      const searchable = JSON.stringify({
+        patient: p,
+        chart: chartFor(p.patient_id),
+        conditions: (conditions as Record<string, unknown[]>)[p.patient_id],
+        symptoms: symptomsStore[p.patient_id],
+      }).toLowerCase()
+      return !q || searchable.includes(q)
     })
     return HttpResponse.json({
       match_count: matches.length,
@@ -298,7 +303,7 @@ export const handlers = [
       const list = alertsSeed.atRisk.slice(0, 5) as ChatPatientRow[]
       return HttpResponse.json({
         reply:
-          'Top care-gap / at-risk patients (source: mv_at_risk_patients). These are operational scheduling flags, not diagnoses.',
+          'These patients may need follow-up attention. These are operational scheduling flags, not diagnoses.',
         agent_type: 'insights',
         patient_id: null,
         citations: [{ view: 'mv_at_risk_patients' }],
@@ -321,7 +326,7 @@ export const handlers = [
       const v = c?.vitals
       return HttpResponse.json({
         reply: v
-          ? `Latest vitals (source: mv_patient_latest_vitals): BP ${v.systolic_bp}/${v.diastolic_bp}, HR ${v.heart_rate} (${v.latest_observation_date}).`
+          ? `Latest recorded vitals: blood pressure ${v.systolic_bp}/${v.diastolic_bp}, heart rate ${v.heart_rate} (${v.latest_observation_date}).`
           : 'Open a patient first to see vitals, or ask with an active patient selected.',
         agent_type: 'retrieval',
         patient_id: body.patient_id ?? null,
@@ -337,7 +342,7 @@ export const handlers = [
       const names = c?.medications.map((m) => m.medication_name).join(', ')
       return HttpResponse.json({
         reply: names
-          ? `Active medications (source: v_active_medications): ${names}.`
+          ? `Active medications: ${names}.`
           : 'No medication list loaded for this patient.',
         agent_type: 'retrieval',
         patient_id: body.patient_id ?? null,

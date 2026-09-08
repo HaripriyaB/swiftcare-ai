@@ -1,13 +1,29 @@
 import { NavLink } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useAuth } from '../auth/useAuth'
+import { subscribeToApiActivity } from '../api/client'
 import { DemoBanner } from './DemoBanner'
-import { BackButton } from './BackButton'
 import { BrandLockup } from './BrandLockup'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth()
   const looker = import.meta.env.VITE_LOOKER_STUDIO_URL
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let timer: number | undefined
+    const unsubscribe = subscribeToApiActivity((count) => {
+      window.clearTimeout(timer)
+      if (count) timer = window.setTimeout(() => setLoading(true), 160)
+      else setLoading(false)
+    })
+    return () => { window.clearTimeout(timer); unsubscribe() }
+  }, [])
+
+  useEffect(() => {
+    document.body.classList.toggle('is-requesting', loading)
+    return () => document.body.classList.remove('is-requesting')
+  }, [loading])
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -23,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </NavLink>
           <NavLink to="/patients">Patients</NavLink>
           <NavLink to="/insights">Insights</NavLink>
+          <NavLink to="/history">Work history</NavLink>
           {looker ? (
             <a href={looker} target="_blank" rel="noreferrer">
               Looker
@@ -30,16 +47,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
         </nav>
         <div className="row app-header__user">
-          <span className="muted" style={{ fontSize: '0.85rem' }}>
+          <NavLink className="app-header__account" to="/account" aria-label="Open account settings">
             {user?.email}
-          </span>
+          </NavLink>
           <button type="button" className="ghost" onClick={() => void signOut()}>
             Sign out
           </button>
         </div>
       </header>
+      {loading ? <span className="request-buffer" role="status" aria-label="Loading"><span className="inline-loader__spinner" aria-hidden="true" /></span> : null}
       <main className="app-main">
-        <BackButton fallback="/" />
         {children}
       </main>
       <footer className="app-footer">

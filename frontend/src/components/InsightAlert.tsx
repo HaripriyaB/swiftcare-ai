@@ -21,7 +21,7 @@ export function InsightAlertRow({
           <span className={`chip ${alert.severity}`}>{alert.severity}</span>
         </div>
         <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
-          {oneLine}
+          <span title={oneLine !== alert.message ? alert.message : undefined}>{oneLine}</span>
         </p>
       </div>
       <button type="button" aria-label={`Dismiss insight ${label}`} onClick={() => onDismiss(alert.alert_id)}>

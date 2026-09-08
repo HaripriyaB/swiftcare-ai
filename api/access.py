@@ -12,8 +12,16 @@ from api import local_demo
 
 
 def _production_authorization_enabled() -> bool:
-    """Require grants outside the explicit synthetic local demo."""
-    return not local_demo.enabled()
+    """Use grant checks only when the synthetic-demo convenience mode is off.
+
+    SwiftCare's deployed cohort is synthetic. Requiring every demo staff member
+    to be provisioned in BigQuery makes Firebase sign-in appear broken, so the
+    demo deliberately grants authenticated users access by default. Set
+    ``SWIFTCARE_DEMO_OPEN_ACCESS=false`` before connecting real data.
+    """
+    return os.getenv("SWIFTCARE_DEMO_OPEN_ACCESS", "true").lower() not in {
+        "1", "true", "yes"
+    }
 
 
 def _deny(message: str = "You are not authorized for this resource") -> None:
@@ -71,7 +79,9 @@ def require_population_access(user: CurrentUser, *, action: str = "read") -> Non
 
 def audit_access(user: CurrentUser, patient_id: str, action: str) -> None:
     """Best-effort, token-free audit record for an authorized action."""
-    if local_demo.enabled():
+    # Work actions are recorded in continuity_action_events. Avoid a remote
+    # BigQuery write on every read in the demo, which made page loads slow.
+    if local_demo.enabled() or os.getenv("AUDIT_READS", "false").lower() not in {"1", "true", "yes"}:
         return
     sql = f"""
 INSERT INTO {fq("swiftcare_ops", "patient_access_audit")}

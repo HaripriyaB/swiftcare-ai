@@ -18,10 +18,14 @@ def test_queue_contract(client, auth_headers):
         "updated_at": "2026-09-07T00:00:00+00:00",
         "disclaimer": "Operational support only — staff review required.",
     }
-    with patch("api.routers.continuity.continuity.list_cards", return_value=[row]):
+    with patch(
+        "api.routers.continuity.continuity.get_queue_snapshot",
+        return_value={"cards": [row], "summary": {"HIGH": 1, "MEDIUM": 0, "LOW": 0}},
+    ):
         res = client.get("/api/v1/continuity/queue", headers=auth_headers)
     assert res.status_code == 200
     assert res.json()["cards"][0]["action_label"] == "Review with care team"
+    assert res.json()["summary"]["HIGH"] == 1
 
 
 def test_complete_rejects_unknown_outcome(client, auth_headers):

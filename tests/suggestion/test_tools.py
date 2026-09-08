@@ -100,13 +100,22 @@ def test_format_matches_table_unit():
 
 
 def test_display_person_name_strips_synthea_suffix():
-    from agents.display_names import display_person_name
+    from agents.display_names import display_full_name, display_person_name, with_display_names
 
     assert display_person_name("Fannie183") == "Fannie"
     assert display_person_name("Kuhn96") == "Kuhn"
     assert display_person_name("Shanice479") == "Shanice"
     assert display_person_name("Mary") == "Mary"
     assert display_person_name(None) is None
+    assert display_full_name("Fannie183 Kuhn96") == "Fannie Kuhn"
+    assert with_display_names({"first_name": "Fannie183", "last_name": "Kuhn96"}) == {
+        "first_name": "Fannie",
+        "last_name": "Kuhn",
+        "first_name_raw": "Fannie183",
+        "last_name_raw": "Kuhn96",
+        "display_first_name": "Fannie",
+        "display_last_name": "Kuhn",
+    }
 
 
 @requires_bq

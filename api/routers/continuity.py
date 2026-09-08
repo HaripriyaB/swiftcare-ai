@@ -24,6 +24,11 @@ class DismissRequest(BaseModel):
     note: str | None = Field(default=None, max_length=280)
 
 
+class UpdateHistoryRequest(BaseModel):
+    outcome: str
+    note: str | None = Field(default=None, max_length=280)
+
+
 def _not_found() -> HTTPException:
     return HTTPException(status_code=404, detail={"error": "not_found", "message": "Continuity card not found or no longer open"})
 
@@ -36,7 +41,48 @@ def queue(
     user: CurrentUser = Depends(get_current_user),
 ):
     require_population_access(user)
-    return {"cards": continuity.list_cards(priority=priority, status=status, limit=limit)}
+    return continuity.get_queue_snapshot(priority=priority, status=status, limit=limit)
+
+
+@router.get("/continuity/summary")
+def summary(user: CurrentUser = Depends(get_current_user)):
+    require_population_access(user)
+    return continuity.get_summary()
+
+
+@router.get("/continuity/history")
+def history(
+    day: str | None = None,
+    limit: int = Query(30, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
+):
+    require_population_access(user)
+    return {"events": continuity.list_history(day=day, limit=limit)}
+
+
+@router.get("/continuity/history/{event_id}")
+def history_entry(event_id: str, user: CurrentUser = Depends(get_current_user)):
+    require_population_access(user)
+    row = continuity.get_history_entry(event_id)
+    if not row:
+        raise _not_found()
+    return row
+
+
+@router.put("/continuity/history/{event_id}")
+def update_history_entry(
+    event_id: str,
+    body: UpdateHistoryRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
+    require_population_access(user, action="write")
+    try:
+        row = continuity.update_history_entry(event_id, user.user_id, body.outcome, body.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"error": "invalid_outcome", "message": str(exc)}) from exc
+    if not row:
+        raise _not_found()
+    return row
 
 
 @router.get("/continuity/cards/{card_id}")

@@ -81,6 +81,153 @@ def format_matches_table(matches: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def search_patients_any_core(
+    *,
+    run_query: RunQuery,
+    fq: Fq,
+    log_tool_call: LogToolCall | None = None,
+    query: str,
+) -> dict[str, Any]:
+    """Search the patient workspace across demographics and chart attributes."""
+    needle = query.strip().lower()
+    if not needle:
+        return {
+            "error": "provide_query",
+            "match_count": 0,
+            "matches": [],
+            "results_table": "_No matching patients._",
+            "message": "Provide a patient name or another chart attribute to search.",
+        }
+
+    limit = int(os.getenv("SEARCH_RESULT_LIMIT", "20"))
+    like = "CONCAT('%', @needle, '%')"
+    sql = f"""
+WITH base AS (
+  SELECT patient_id, first_name, last_name, city, state, last_visit_date,
+         age_years, gender
+  FROM {fq("swiftcare_fhir_views", "v_patient_360")}
+),
+attribute_hits AS (
+  SELECT patient_id, 'condition' AS matched_on, 260 AS match_score
+  FROM {fq("swiftcare_fhir_views", "v_patient_timeline")}
+  WHERE event_type = 'condition' AND LOWER(COALESCE(event_label, '')) LIKE {like}
+  GROUP BY patient_id
+  UNION ALL
+  SELECT patient_id, 'medication', 250
+  FROM {fq("swiftcare_fhir_views", "v_active_medications")}
+  WHERE LOWER(COALESCE(medication_name, '')) LIKE {like}
+  GROUP BY patient_id
+  UNION ALL
+  SELECT patient_id, 'allergy', 240
+  FROM {fq("swiftcare_fhir_views", "v_active_allergies")}
+  WHERE LOWER(COALESCE(allergen, '')) LIKE {like}
+  GROUP BY patient_id
+  UNION ALL
+  SELECT patient_id, 'visit', 230
+  FROM {fq("swiftcare_fhir_views", "v_visit_summary")}
+  WHERE LOWER(CONCAT(COALESCE(visit_type, ''), ' ', COALESCE(chief_complaint, ''))) LIKE {like}
+  GROUP BY patient_id
+  UNION ALL
+  SELECT patient_id, 'observation', 220
+  FROM {fq("swiftcare_fhir_views", "v_patient_timeline")}
+  WHERE event_type = 'observation' AND LOWER(COALESCE(event_label, '')) LIKE {like}
+  GROUP BY patient_id
+  UNION ALL
+  SELECT patient_id, 'symptom', 210
+  FROM {fq("swiftcare_ops", "patient_symptoms")}
+  WHERE LOWER(COALESCE(description, '')) LIKE {like}
+  GROUP BY patient_id
+),
+attribute_matches AS (
+  SELECT patient_id,
+         MAX(match_score) AS match_score,
+         ARRAY_AGG(matched_on ORDER BY match_score DESC LIMIT 1)[SAFE_OFFSET(0)] AS matched_on
+  FROM attribute_hits
+  GROUP BY patient_id
+),
+scored AS (
+  SELECT
+    b.*,
+    CASE
+      WHEN LOWER(CONCAT(COALESCE(b.first_name, ''), ' ', COALESCE(b.last_name, ''))) = @needle THEN 500
+      WHEN STARTS_WITH(LOWER(COALESCE(b.first_name, '')), @needle)
+        OR STARTS_WITH(LOWER(COALESCE(b.last_name, '')), @needle) THEN 420
+      WHEN LOWER(CONCAT(COALESCE(b.first_name, ''), ' ', COALESCE(b.last_name, ''))) LIKE {like} THEN 380
+      WHEN LOWER(CONCAT(COALESCE(b.city, ''), ' ', COALESCE(b.state, ''))) LIKE {like} THEN 320
+      WHEN LOWER(CAST(b.gender AS STRING)) LIKE {like}
+        OR LOWER(CAST(b.age_years AS STRING)) LIKE {like}
+        OR LOWER(CAST(b.last_visit_date AS STRING)) LIKE {like} THEN 300
+      ELSE COALESCE(a.match_score, 0)
+    END AS match_score,
+    CASE
+      WHEN LOWER(CONCAT(COALESCE(b.first_name, ''), ' ', COALESCE(b.last_name, ''))) LIKE {like}
+        THEN 'name'
+      WHEN LOWER(CONCAT(COALESCE(b.city, ''), ' ', COALESCE(b.state, ''))) LIKE {like}
+        THEN 'location'
+      ELSE COALESCE(a.matched_on, 'chart attribute')
+    END AS matched_on
+  FROM base b
+  LEFT JOIN attribute_matches a USING (patient_id)
+)
+SELECT patient_id, first_name, last_name, city, state, last_visit_date,
+       age_years, gender, match_score, matched_on
+FROM scored
+WHERE match_score > 0
+ORDER BY match_score DESC, last_name, first_name, last_visit_date DESC
+LIMIT @limit
+"""
+    rows, row_count, latency_ms = run_query(
+        sql,
+        {"needle": needle, "limit": limit},
+    )
+    if log_tool_call is not None:
+        log_tool_call(
+            "search_patients",
+            patient_id=rows[0]["patient_id"] if rows else None,
+            action="search_any_attribute",
+            row_count=row_count,
+            latency_ms=latency_ms,
+        )
+
+    matches = [
+        with_display_names(
+            {
+                "patient_id": r.get("patient_id"),
+                "first_name": r.get("first_name"),
+                "last_name": r.get("last_name"),
+                "location": ", ".join(
+                    p for p in [r.get("city"), r.get("state")] if p
+                )
+                or None,
+                "city": r.get("city"),
+                "state": r.get("state"),
+                "last_visit_date": r.get("last_visit_date"),
+                "age_years": r.get("age_years"),
+                "gender": r.get("gender"),
+                "match_score": r.get("match_score"),
+                "matched_on": r.get("matched_on"),
+            }
+        )
+        for r in rows
+    ]
+    results_table = format_matches_table(matches)
+    result: dict[str, Any] = {
+        "match_count": len(matches),
+        "matches": matches,
+        "results_table": results_table,
+        "search_mode": "all_attributes",
+        "query": {"text": query},
+    }
+    if len(matches) > 1:
+        result["message"] = "Multiple patients matched. Choose a row to open the patient workspace."
+    elif len(matches) == 0:
+        result["message"] = "No patients found for that search."
+    else:
+        result["message"] = "Single patient matched."
+    result["display_hint"] = result["message"]
+    return result
+
+
 def search_patients_core(
     *,
     run_query: RunQuery,
@@ -89,6 +236,7 @@ def search_patients_core(
     name: str | None = None,
     last_name: str | None = None,
     first_name: str | None = None,
+    query: str | None = None,
 ) -> dict[str, Any]:
     """Find patients by prefix-matching first and/or last name.
 
@@ -96,6 +244,14 @@ def search_patients_core(
     with a case-insensitive prefix (so "Kuhn" finds "Kuhn96"). Results are
     ordered best match → weakest and include a markdown ``results_table``.
     """
+    if query and not name and not last_name and not first_name:
+        return search_patients_any_core(
+            run_query=run_query,
+            fq=fq,
+            log_tool_call=log_tool_call,
+            query=query,
+        )
+
     bare = (name or "").strip()
     first = (first_name or "").strip()
     last = (last_name or "").strip()

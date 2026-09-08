@@ -26,6 +26,14 @@ def display_person_name(value: Any) -> str | None:
     return cleaned or text
 
 
+def display_full_name(value: Any) -> str | None:
+    """Clean every name part in a user-facing full name string."""
+    if value is None:
+        return None
+    parts = str(value).split()
+    return " ".join(display_person_name(part) or part for part in parts)
+
+
 def with_display_names(row: dict[str, Any]) -> dict[str, Any]:
     """Return a copy with first_name/last_name cleaned for display.
 
@@ -35,7 +43,9 @@ def with_display_names(row: dict[str, Any]) -> dict[str, Any]:
     if "first_name" in out:
         out["first_name_raw"] = out.get("first_name")
         out["first_name"] = display_person_name(out.get("first_name"))
+        out["display_first_name"] = out["first_name"]
     if "last_name" in out:
         out["last_name_raw"] = out.get("last_name")
         out["last_name"] = display_person_name(out.get("last_name"))
+        out["display_last_name"] = out["last_name"]
     return out

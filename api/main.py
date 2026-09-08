@@ -10,6 +10,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
@@ -17,6 +19,21 @@ load_dotenv(ROOT / ".env")
 from api.routers import chat, continuity, health, insights, patients, session  # noqa: E402
 
 app = FastAPI(title="SwiftCare AI API", version="0.6.0")
+
+
+class SPAStaticFiles(StaticFiles):
+    """Serve the React entry point for bookmarked/refreshable client routes."""
+
+    async def get_response(self, path: str, scope: dict) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            # Starlette raises (rather than returns) a 404 for a missing static
+            # file. A client-side route has no extension, so give React its
+            # entry point while keeping missing assets as ordinary 404s.
+            if exc.status_code == 404 and "." not in path.rsplit("/", 1)[-1]:
+                return await super().get_response("index.html", scope)
+            raise
 
 origins = [
     o.strip()
@@ -55,4 +72,4 @@ app.include_router(chat.router, prefix="/api/v1")
 
 _static = os.getenv("STATIC_FE_DIR", "")
 if _static and Path(_static).is_dir():
-    app.mount("/", StaticFiles(directory=_static, html=True), name="fe")
+    app.mount("/", SPAStaticFiles(directory=_static, html=True), name="fe")

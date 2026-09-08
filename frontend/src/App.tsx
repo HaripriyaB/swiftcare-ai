@@ -7,6 +7,9 @@ import { PatientPage } from './pages/PatientPage'
 import { InsightsPage } from './pages/InsightsPage'
 import { ContinuityActionPage } from './pages/ContinuityActionPage'
 import { PatientsPage } from './pages/PatientsPage'
+import { WorkHistoryPage } from './pages/WorkHistoryPage'
+import { WorkHistoryDetailPage } from './pages/WorkHistoryDetailPage'
+import { AccountSettingsPage } from './pages/AccountSettingsPage'
 import type { ReactNode } from 'react'
 
 function Protected({ children }: { children: ReactNode }) {
@@ -32,6 +35,9 @@ export default function App() {
       <Route path="/today" element={<Navigate to="/" replace />} />
       <Route path="/continuity/:cardId" element={<Protected><ContinuityActionPage /></Protected>} />
       <Route path="/patients" element={<Protected><PatientsPage /></Protected>} />
+      <Route path="/history" element={<Protected><WorkHistoryPage /></Protected>} />
+      <Route path="/history/:eventId" element={<Protected><WorkHistoryDetailPage /></Protected>} />
+      <Route path="/account" element={<Protected><AccountSettingsPage /></Protected>} />
       <Route
         path="/patient/:patientId"
         element={

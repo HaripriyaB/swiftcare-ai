@@ -44,6 +44,42 @@ export interface ContinuityQueueResponse {
   cards: ContinuityCard[]
 }
 
+export interface ContinuitySummary {
+  HIGH: number
+  MEDIUM: number
+  LOW: number
+}
+
+export interface ContinuityEvent {
+  event_id: string
+  card_id: string
+  patient_id: string
+  patient_name: string
+  action_label: string
+  event_type: string
+  outcome?: string | null
+  note?: string | null
+  actor_user_id: string
+  created_at: string
+}
+
+export interface ContinuityHistoryResponse { events: ContinuityEvent[] }
+
+export interface ContinuityAuditEvent {
+  event_id: string
+  event_type: string
+  outcome?: string | null
+  note?: string | null
+  actor_user_id: string
+  created_at: string
+}
+
+export interface ContinuityHistoryEntry extends ContinuityEvent {
+  priority: ContinuityPriority
+  why_now: string
+  audit_history: ContinuityAuditEvent[]
+}
+
 export interface PatientMatch {
   patient_id: string
   first_name?: string
@@ -52,6 +88,7 @@ export interface PatientMatch {
   display_last_name?: string
   city?: string
   state?: string
+  matched_on?: string
   last_visit_date?: string
   age_years?: number
   gender?: string
@@ -67,6 +104,8 @@ export interface PatientSearchResponse {
 
 export interface PatientSummary {
   patient_id: string
+  first_name?: string
+  last_name?: string
   display_first_name?: string
   display_last_name?: string
   age_years?: number

@@ -1,8 +1,9 @@
 import type { PatientSummary } from '../../api/types'
+import { displayPatientName } from '../../utils/displayPatientName'
 
 export function SummaryPanel({ summary }: { summary: PatientSummary | null }) {
   if (!summary) return <p className="empty">Nothing on file.</p>
-  const name = `${summary.display_first_name ?? ''} ${summary.display_last_name ?? ''}`.trim()
+  const name = displayPatientName(summary.display_first_name ?? summary.first_name, summary.display_last_name ?? summary.last_name)
   return (
     <div className="row" style={{ justifyContent: 'space-between' }}>
       <div>

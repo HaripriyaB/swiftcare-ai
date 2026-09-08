@@ -1,6 +1,7 @@
 import type { AtRiskPatient, ExportFormat } from '../api/types'
 import { PLAIN_RISK_LABELS } from '../api/types'
 import { downloadBlob, stamp } from '../utils/download'
+import { cleanNamePart, displayPatientName } from '../utils/displayPatientName'
 import { toCsv } from '../utils/toCsv'
 
 export function AtRiskTable({
@@ -13,8 +14,8 @@ export function AtRiskTable({
   const download = (format: ExportFormat) => {
     const rows = patients.map((p) => ({
       patient_id: p.patient_id,
-      display_first_name: p.display_first_name,
-      display_last_name: p.display_last_name,
+      display_first_name: cleanNamePart(p.display_first_name),
+      display_last_name: cleanNamePart(p.display_last_name),
       risk_flag: p.risk_flag,
       risk_level: p.risk_level,
       days_since_last_visit: p.days_since_last_visit,
@@ -62,7 +63,7 @@ export function AtRiskTable({
             {patients.map((p) => (
               <tr key={p.patient_id} onClick={() => onOpen(p.patient_id)}>
                 <td>
-                  {p.display_first_name} {p.display_last_name}
+                  {displayPatientName(p.display_first_name, p.display_last_name)}
                 </td>
                 <td>{PLAIN_RISK_LABELS[p.risk_flag] ?? p.risk_flag}</td>
                 <td>

@@ -14,6 +14,7 @@ def search_patients(
     name: str | None = None,
     last_name: str | None = None,
     first_name: str | None = None,
+    query: str | None = None,
 ) -> dict[str, Any]:
     """Find patients by prefix-matching first and/or last name.
 
@@ -28,6 +29,7 @@ def search_patients(
             last_name prefix.
         last_name: Optional explicit last-name prefix.
         first_name: Optional explicit first-name prefix.
+        query: Free-text search across demographics and chart attributes.
 
     Returns:
         match_count, matches, results_table (markdown), and helper message.
@@ -39,4 +41,5 @@ def search_patients(
         name=name,
         last_name=last_name,
         first_name=first_name,
+        query=query,
     )

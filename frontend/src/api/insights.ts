@@ -1,4 +1,4 @@
-import { apiFetch } from './client'
+import { apiFetch, clearApiCache } from './client'
 import type {
   AtRiskPatient,
   InsightAlert,
@@ -39,5 +39,5 @@ export function dismissInsightAlert(alertId: string) {
   return apiFetch<{ alert_id: string; dismissed: true }>(
     `/insights/alerts/${alertId}/dismiss`,
     { method: 'POST' },
-  )
+  ).then((value) => { clearApiCache('/insights/'); return value })
 }

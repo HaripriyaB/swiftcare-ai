@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { sendChat } from '../api/chat'
 import type { ChatPatientRow, ChatResponse } from '../api/types'
 import { DownloadPatientsFromReply } from './DownloadPatientsFromReply'
+import { readPageMemory, writePageMemory } from '../utils/pageMemory'
 
 type Msg = {
   role: 'user' | 'assistant'
   text: string
-  agent_type?: string
   patients?: ChatPatientRow[]
+}
+
+function friendlyReply(text: string) {
+  return text
+    .replace(/\s*\(?\s*source\s*:\s*[^)\n]+\)?/gi, '')
+    .replace(/\b(?:retrieval|orchestrator|insights|suggestion)\s+agent\b/gi, 'Swify')
+    .trim()
 }
 
 export function ChatPanel({
@@ -17,10 +24,16 @@ export function ChatPanel({
   patientId?: string | null
   sessionId?: string | null
 }) {
-  const [open, setOpen] = useState(false)
-  const [input, setInput] = useState('')
-  const [msgs, setMsgs] = useState<Msg[]>([])
+  const cacheKey = `swify:${patientId ?? 'workspace'}:${sessionId ?? 'default'}`
+  const restored = readPageMemory<{ open: boolean; input: string; msgs: Msg[] }>(cacheKey)
+  const [open, setOpen] = useState(() => restored?.open ?? false)
+  const [input, setInput] = useState(() => restored?.input ?? '')
+  const [msgs, setMsgs] = useState<Msg[]>(() => restored?.msgs ?? [])
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    writePageMemory(cacheKey, { open, input, msgs })
+  }, [cacheKey, input, msgs, open])
 
   if (import.meta.env.VITE_ENABLE_CHAT !== 'true') return null
 
@@ -41,15 +54,14 @@ export function ChatPanel({
         ...m,
         {
           role: 'assistant',
-          text: res.reply,
-          agent_type: res.agent_type,
+          text: friendlyReply(res.reply),
           patients: res.patients ?? [],
         },
       ])
     } catch {
       setMsgs((m) => [
         ...m,
-        { role: 'assistant', text: 'Something went wrong talking to the mock API.' },
+        { role: 'assistant', text: 'Swify could not send that message. Please check the connection and try again.' },
       ])
     } finally {
       setBusy(false)
@@ -58,29 +70,27 @@ export function ChatPanel({
 
   return (
     <div
+      className="swify-chat"
       style={{
         position: 'fixed',
         right: 16,
-        bottom: 16,
         width: open ? 340 : 'auto',
         zIndex: 20,
       }}
     >
       {!open ? (
         <button type="button" className="primary" onClick={() => setOpen(true)}>
-          Chat
+          Ask Swify
         </button>
       ) : (
         <div className="panel stack" style={{ maxHeight: '70vh' }}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <strong>Chat</strong>
-            <button type="button" className="ghost" onClick={() => setOpen(false)}>
-              Close
+            <strong>Swify — the AI assistant</strong>
+            <button type="button" className="ghost swify-chat__close" onClick={() => setOpen(false)} aria-label="Close Swify">
+              ×
             </button>
           </div>
-          <p className="muted" style={{ fontSize: '0.75rem', margin: 0 }}>
-            Demo replies until API is connected (Chunk 6)
-          </p>
+          <p className="muted" style={{ fontSize: '0.75rem', margin: 0 }}>Grounded in the current patient record and operational data. Not for diagnosis or treatment.</p>
           <div className="stack" style={{ overflow: 'auto', maxHeight: 280 }}>
             {msgs.map((m, i) => (
               <div
@@ -93,11 +103,6 @@ export function ChatPanel({
                   borderRadius: 8,
                 }}
               >
-                {m.agent_type ? (
-                  <div className="muted" style={{ fontSize: '0.7rem' }}>
-                    {m.agent_type}
-                  </div>
-                ) : null}
                 <div>{m.text}</div>
                 {m.patients?.length ? (
                   <DownloadPatientsFromReply patients={m.patients} />
@@ -110,7 +115,7 @@ export function ChatPanel({
               aria-label="Chat message"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about care gaps, meds, vitals…"
+              placeholder="Ask about follow-ups, medications, or recent visits…"
             />
             <button type="submit" className="primary" disabled={busy}>
               Send

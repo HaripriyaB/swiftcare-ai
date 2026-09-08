@@ -30,7 +30,7 @@ export function DownloadPatientDetails(props: {
   alerts: InsightAlert[]
   disabled?: boolean
 }) {
-  const [format, setFormat] = useState<ExportFormat>('json')
+  const [format, setFormat] = useState<ExportFormat>('csv')
 
   const run = () => {
     const exp: PatientDetailsExport = buildPatientExport({
@@ -61,11 +61,9 @@ export function DownloadPatientDetails(props: {
   }
 
   return (
-    <div className="row">
-      <label className="row" style={{ gap: '0.35rem' }}>
-        <span className="muted" style={{ fontSize: '0.85rem' }}>
-          Format
-        </span>
+    <div className="patient-download row">
+      <label className="patient-download__format">
+        <span className="muted">Format</span>
         <select
           value={format}
           onChange={(e) => setFormat(e.target.value as ExportFormat)}
@@ -77,14 +75,15 @@ export function DownloadPatientDetails(props: {
         </select>
       </label>
       <button
+        className="text-action"
         type="button"
         aria-label="Download patient details"
         disabled={props.disabled}
         onClick={run}
       >
-        Download patient details
+        Download details
       </button>
-      <span className="muted" style={{ fontSize: '0.75rem' }}>
+      <span className="muted patient-download__policy">
         Contains patient data — handle per clinic policy
       </span>
     </div>

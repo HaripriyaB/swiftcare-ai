@@ -6,7 +6,7 @@ import { AdvisoryCardRow } from '../components/AdvisoryCard'
 import { InsightAlertRow } from '../components/InsightAlert'
 import { DownloadPatientsFromReply } from '../components/DownloadPatientsFromReply'
 import { buildPatientExport } from '../utils/buildPatientExport'
-import { OUTCOMES_SUBTITLE, DEFAULT_CARD_DISCLAIMER } from '../api/types'
+import { DEFAULT_CARD_DISCLAIMER } from '../api/types'
 import type { AdvisoryCard, DiagnosticOutcome, PatientMatch } from '../api/types'
 
 describe('F1 display & guardrails', () => {
@@ -64,18 +64,18 @@ describe('F1 display & guardrails', () => {
     expect(screen.getByText(/care gap/i)).toBeInTheDocument()
   })
 
-  it('F1-008 outcomes subtitle present', () => {
+  it('F1-008 conditions are read-only', () => {
     const outcomes: DiagnosticOutcome[] = [
       {
         condition_id: 'c1',
         patient_id: 'p1',
         display_name: 'Essential hypertension',
         status: 'active',
-        attribution: OUTCOMES_SUBTITLE,
+        attribution: 'documented condition',
       },
     ]
     render(<DiagnosticOutcomesPanel outcomes={outcomes} />)
-    expect(screen.getByText(OUTCOMES_SUBTITLE)).toBeInTheDocument()
+    expect(screen.getByText('Essential hypertension')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /edit/i })).toBeNull()
   })
 

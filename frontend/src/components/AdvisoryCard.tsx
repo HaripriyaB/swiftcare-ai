@@ -19,7 +19,7 @@ export function AdvisoryCardRow({
           <strong>{card.content.title}</strong>
           <span className={`chip ${card.content.severity}`}>{card.content.severity}</span>
         </div>
-        <p style={{ margin: 0 }}>
+        <p style={{ margin: 0 }} title={!open && card.content.body.length > 90 ? card.content.body : undefined}>
           {open ? card.content.body : `${card.content.body.slice(0, 90)}${card.content.body.length > 90 ? '…' : ''}`}
         </p>
         {open ? (

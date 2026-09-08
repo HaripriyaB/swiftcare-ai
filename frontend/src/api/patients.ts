@@ -1,4 +1,4 @@
-import { apiFetch } from './client'
+import { apiFetch, clearApiCache } from './client'
 import type {
   AdvisoryCard,
   Allergy,
@@ -55,5 +55,5 @@ export function dismissAdvisoryCard(patientId: string, cardId: string) {
   return apiFetch<{ card_id: string; dismissed: true }>(
     `/patients/${patientId}/advisory-cards/${cardId}/dismiss`,
     { method: 'POST' },
-  )
+  ).then((value) => { clearApiCache(`/patients/${patientId}`); return value })
 }

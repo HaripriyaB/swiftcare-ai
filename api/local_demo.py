@@ -66,16 +66,17 @@ def search_patients(query: str) -> dict[str, Any]:
     needle = (query or "").strip().lower()
     matches = []
     for patient in _fixture("patients.json"):
-        names = " ".join(
-            str(patient.get(key, ""))
-            for key in (
-                "display_first_name",
-                "display_last_name",
-                "first_name",
-                "last_name",
-            )
+        patient_id = str(patient.get("patient_id", ""))
+        chart = _fixture("chart.json").get(patient_id, {})
+        searchable = " ".join(
+            [
+                json.dumps(patient),
+                json.dumps(chart),
+                json.dumps(_fixture("conditions.json").get(patient_id, [])),
+                json.dumps(_symptom_store().get(patient_id, [])),
+            ]
         ).lower()
-        if not needle or needle in names:
+        if not needle or needle in searchable:
             matches.append(copy.deepcopy(patient))
     return {
         "match_count": len(matches),
@@ -175,4 +176,3 @@ def dismiss_alert(alert_id: str) -> bool:
             row["dismissed"] = True
             return True
     return False
-
