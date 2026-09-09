@@ -1,7 +1,6 @@
 import { NavLink } from 'react-router-dom'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { subscribeToApiActivity } from '../api/client'
 import { DemoBanner } from './DemoBanner'
 import { BrandLockup } from './BrandLockup'
 import { ChatPanel } from './ChatPanel'
@@ -27,23 +26,8 @@ function NavigationIcon({ name }: { name: string }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth()
   const looker = import.meta.env.VITE_LOOKER_STUDIO_URL
-  const [loading, setLoading] = useState(false)
   const [navigationExpanded, setNavigationExpanded] = useState(true)
-
-  useEffect(() => {
-    let timer: number | undefined
-    const unsubscribe = subscribeToApiActivity((count) => {
-      window.clearTimeout(timer)
-      if (count) timer = window.setTimeout(() => setLoading(true), 160)
-      else setLoading(false)
-    })
-    return () => { window.clearTimeout(timer); unsubscribe() }
-  }, [])
-
-  useEffect(() => {
-    document.body.classList.toggle('is-requesting', loading)
-    return () => document.body.classList.remove('is-requesting')
-  }, [loading])
+  const [swifyExpanded, setSwifyExpanded] = useState(true)
 
   return (
     <div className="app-shell">
@@ -89,36 +73,32 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="app-topbar__user">
+            <span className="app-topbar__contact">Main desk · (617) 555-0140<br />Emergency · (617) 555-0911</span>
             <span className="muted">{user?.email}</span>
             <button type="button" className="app-topbar__logout" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}>
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5M15 12H4" /></svg>
             </button>
           </div>
         </header>
-        <div className="app-shell__content">
+        <div className={`app-shell__content ${swifyExpanded ? '' : 'is-swify-collapsed'}`}>
           <div className="app-shell__body">
-            {loading ? <span className="request-buffer" role="status" aria-label="Loading"><span className="inline-loader__spinner" aria-hidden="true" /></span> : null}
             <main className="app-main">
               {children}
             </main>
-            <footer className="app-footer">
-              <div className="app-footer__inner">
-                <div>
-                  <strong style={{ fontFamily: 'var(--sc-font-display)' }}>SwiftCare Clinic</strong>
-                  <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
-                    Campus hours Mon–Fri 07:00–20:00 · Sat 08:00–14:00
-                  </p>
-                </div>
-                <div className="muted" style={{ fontSize: '0.85rem' }}>
-                  <div>Main desk · (617) 555-0140</div>
-                  <div>Emergency · (617) 555-0911</div>
-                </div>
-                <div className="muted" style={{ fontSize: '0.85rem' }}>Synthetic demo data · Operational support only.</div>
-              </div>
-            </footer>
           </div>
-          <ChatPanel />
+          <ChatPanel expanded={swifyExpanded} onExpandedChange={setSwifyExpanded} />
         </div>
+        <footer className="app-footer">
+          <div className="app-footer__inner">
+            <div>
+              <strong style={{ fontFamily: 'var(--sc-font-display)' }}>SwiftCare Clinic</strong>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
+                Campus hours Mon–Fri 07:00–20:00 · Sat 08:00–14:00
+              </p>
+            </div>
+            <div className="muted" style={{ fontSize: '0.85rem' }}>Synthetic demo data · Operational support only.</div>
+          </div>
+        </footer>
       </div>
     </div>
   )

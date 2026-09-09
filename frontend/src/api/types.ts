@@ -42,6 +42,11 @@ export interface ContinuityCard {
 
 export interface ContinuityQueueResponse {
   cards: ContinuityCard[]
+  summary?: ContinuitySummary
+  offset?: number
+  next_offset?: number | null
+  has_more?: boolean
+  total_count?: number
 }
 
 export interface ContinuitySummary {
@@ -258,6 +263,8 @@ export interface ChatPatientRow {
   age_years?: number
   city?: string
   state?: string
+  last_visit_date?: string
+  matched_on?: string
 }
 
 export interface ChatRequest {

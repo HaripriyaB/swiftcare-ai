@@ -39,6 +39,7 @@ def queue(
     action_type: str | None = None,
     status: Literal["OPEN", "IN_PROGRESS", "COMPLETED", "DISMISSED"] | None = "OPEN",
     limit: int = Query(8, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     user: CurrentUser = Depends(get_current_user),
 ):
     require_population_access(user)
@@ -47,6 +48,7 @@ def queue(
         action_type=action_type,
         status=status,
         limit=limit,
+        offset=offset,
     )
 
 

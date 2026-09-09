@@ -1,4 +1,4 @@
-from api.orchestrator import classify_intent, should_refuse_clinical
+from api.orchestrator import classify_intent, extract_patient_matches, is_operational_queue_request, is_today_priority_request, should_refuse_clinical, with_patient_name
 
 
 def test_classify_insights():
@@ -30,3 +30,43 @@ def test_refuse_clinical():
     assert should_refuse_clinical("Please diagnose this patient")
     assert should_refuse_clinical("Prescribe an antibiotic")
     assert not should_refuse_clinical("List care gaps")
+
+
+def test_today_priority_request_is_routed_before_the_chart_agent():
+    assert is_today_priority_request("What is today's important work?")
+    assert is_today_priority_request("What should I work on first?")
+    assert not is_today_priority_request("When was this patient's last visit?")
+
+
+def test_operational_action_questions_are_routed_to_the_attention_queue():
+    assert is_operational_queue_request("Show follow-up action patients only")
+    assert is_operational_queue_request("Which medium priority patients need outreach?")
+    assert not is_operational_queue_request("Show this patient's medications")
+
+
+def test_patient_reply_is_prefixed_with_the_active_patient_name(monkeypatch):
+    monkeypatch.setattr("api.orchestrator._patient_display_name", lambda _: "Myles Johnson")
+    assert with_patient_name("Latest vitals are available.", "patient-1") == "Myles Johnson\n\nLatest vitals are available."
+
+
+def test_extract_patient_matches_turns_markdown_rows_into_structured_choices():
+    reply, patients = extract_patient_matches(
+        """Matching patients
+| # | First name | Last name | Location | Last visit | Patient ID | Match |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Clinton763 | Kuhn96 | Brookline, Massachusetts | 2005-09-25 | `00b97c3a-ffbe-4d01-a110-d3d7786bebc4` | Last name |"""
+    )
+
+    assert "|" not in reply
+    assert "Choose a patient" in reply
+    assert patients == [
+        {
+            "patient_id": "00b97c3a-ffbe-4d01-a110-d3d7786bebc4",
+            "display_first_name": "Clinton",
+            "display_last_name": "Kuhn",
+            "city": "Brookline",
+            "state": "Massachusetts",
+            "last_visit_date": "2005-09-25",
+            "matched_on": "Last name",
+        }
+    ]

@@ -3,6 +3,7 @@ import type { ContinuityCard, ContinuityHistoryEntry, ContinuityHistoryResponse,
 
 const CLIENT_CACHE_MS = 45_000
 const queueCache = new Map<string, { loadedAt: number; value: ContinuityQueueResponse & { summary: ContinuitySummary } }>()
+export const ATTENTION_QUEUE_BATCH_SIZE = 50
 
 export function getContinuityQueue(priority?: string, actionType?: string) {
   const query = new URLSearchParams({ status: 'OPEN', limit: '8' })
@@ -18,6 +19,24 @@ export function getAttentionQueue(priority?: string, actionType?: string, refres
   const query = new URLSearchParams({ status: 'OPEN', limit: '8' })
   if (priority) query.set('priority', priority)
   if (actionType) query.set('action_type', actionType)
+  return apiFetch<ContinuityQueueResponse & { summary: ContinuitySummary }>(`/continuity/queue?${query}`).then((value) => {
+    queueCache.set(key, { loadedAt: Date.now(), value })
+    return value
+  })
+}
+
+/**
+ * Fetch one unfiltered queue batch. The UI applies priority filters locally,
+ * avoiding a database read every time staff switch High / Medium / Low.
+ */
+export function getAttentionQueueBatch(offset = 0, refresh = false) {
+  const key = `batch:${offset}`
+  const cached = queueCache.get(key)
+  if (!refresh && cached && Date.now() - cached.loadedAt < CLIENT_CACHE_MS) return Promise.resolve(cached.value)
+  const query = new URLSearchParams({ status: 'OPEN', limit: String(ATTENTION_QUEUE_BATCH_SIZE), offset: String(offset) })
+  // Bypass only the browser's short GET cache on the scheduled refresh. The
+  // API's shared cache remains active and continues to protect BigQuery.
+  if (refresh) query.set('refresh', String(Date.now()))
   return apiFetch<ContinuityQueueResponse & { summary: ContinuitySummary }>(`/continuity/queue?${query}`).then((value) => {
     queueCache.set(key, { loadedAt: Date.now(), value })
     return value

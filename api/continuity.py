@@ -66,8 +66,10 @@ def get_queue_snapshot(
     action_type: str | None,
     status: str | None,
     limit: int,
+    offset: int = 0,
 ) -> dict[str, Any]:
-    key = f"snapshot:{priority}:{action_type}:{status}:{limit}"
+    offset = max(offset, 0)
+    key = f"snapshot:{priority}:{action_type}:{status}:{limit}:{offset}"
     started_at = time.perf_counter()
     hit = _cache.get(key)
     if hit and time.monotonic() - hit[0] < _CACHE_SECONDS:
@@ -84,6 +86,7 @@ def get_queue_snapshot(
         action_type=action_type,
         status=status,
         limit=limit,
+        offset=offset,
     )
     _cache[key] = (time.monotonic(), snapshot)
     response = dict(snapshot)
@@ -101,11 +104,14 @@ def _queue_snapshot(
     action_type: str | None,
     status: str | None,
     limit: int,
+    offset: int,
 ) -> dict[str, Any]:
     """Load cards and priority totals in one BigQuery read."""
     status = status or "OPEN"
     params: dict[str, Any] = {
         "limit": min(max(limit, 1), 50),
+        "query_limit": min(max(limit, 1), 50) + 1,
+        "offset": max(offset, 0),
         "status": status,
         "priority": priority,
         "action_type": action_type,
@@ -121,26 +127,40 @@ WITH scoped AS (
   WHERE status = @status
     AND (@action_type IS NULL OR action_type = @action_type)
 )
-SELECT * EXCEPT(high_count, medium_count, low_count), high_count, medium_count, low_count
+SELECT * EXCEPT(high_count, medium_count, low_count), high_count, medium_count, low_count,
+       COUNT(*) OVER() AS total_count
 FROM scoped
 WHERE (@priority IS NULL OR priority = @priority)
 ORDER BY CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
          priority_score DESC, created_at DESC
-LIMIT @limit
+LIMIT @query_limit
+OFFSET @offset
 """
     rows, _, _ = run_query(sql, params)
+    has_more = len(rows) > params["limit"]
+    rows = rows[:params["limit"]]
     summary = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    total_count = 0
     if rows:
         summary = {
             "HIGH": int(rows[0].pop("high_count", 0)),
             "MEDIUM": int(rows[0].pop("medium_count", 0)),
             "LOW": int(rows[0].pop("low_count", 0)),
         }
+        total_count = int(rows[0].pop("total_count", 0))
     for row in rows[1:]:
         row.pop("high_count", None)
         row.pop("medium_count", None)
         row.pop("low_count", None)
-    return {"cards": [_hydrate(row) for row in rows], "summary": summary}
+        row.pop("total_count", None)
+    return {
+        "cards": [_hydrate(row) for row in rows],
+        "summary": summary,
+        "offset": offset,
+        "next_offset": offset + len(rows) if has_more else None,
+        "has_more": has_more,
+        "total_count": total_count,
+    }
 
 
 def _list_cards(*, priority: str | None, status: str | None, limit: int) -> list[dict[str, Any]]:

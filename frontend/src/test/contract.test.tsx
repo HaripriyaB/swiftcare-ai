@@ -45,6 +45,8 @@ describe('F1 display & guardrails', () => {
   it('F1-001c presents Swify replies without raw markdown or internal source labels', () => {
     expect(formatSwifyReply('**Medication**\n* Hydrochlorothiazide\n(source: mv_patient_latest_vitals)'))
       .toBe('Medication\n• Hydrochlorothiazide')
+    expect(formatSwifyReply('### Matching patients (12)\n_Choose a patient below to continue._'))
+      .toBe('Matching patients (12)\nChoose a patient below to continue.')
   })
 
   it('F1-002 advisory shows disclaimer when expanded path has fallback', () => {

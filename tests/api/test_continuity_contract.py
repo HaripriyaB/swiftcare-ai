@@ -34,6 +34,7 @@ def test_queue_contract(client, auth_headers):
         action_type="REVIEW_WITH_CARE_TEAM",
         status="OPEN",
         limit=8,
+        offset=0,
     )
 
 

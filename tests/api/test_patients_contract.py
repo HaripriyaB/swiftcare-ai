@@ -29,8 +29,8 @@ def test_search_contract(client, auth_headers):
 
 
 def test_summary_404(client, auth_headers):
-    with patch(
-        "api.routers.patients.get_patient_summary", return_value=None
+    with patch("api.routers.patients.get_patient_summary", return_value=None), patch(
+        "api.routers.patients.continuity.patient_context_fallback", return_value=None
     ):
         res = client.get(
             "/api/v1/patients/missing/summary", headers=auth_headers

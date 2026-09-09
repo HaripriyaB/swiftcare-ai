@@ -305,9 +305,10 @@ textarea {
 
 /* App shell */
 .app-shell { min-height: 100vh; display: flex; background: var(--sc-bg); }
-.app-shell__workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; }
-.app-shell__content { min-width: 0; flex: 1; display: flex; }
-.app-shell__body { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.app-shell__workspace { min-width: 0; min-height: 100vh; flex: 1; display: flex; flex-direction: column; }
+.app-shell__content { min-width: 0; min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 390px); grid-template-rows: minmax(auto, 1fr); transition: grid-template-columns 180ms ease; }
+.app-shell__content.is-swify-collapsed { grid-template-columns: minmax(0, 1fr) 3.6rem; }
+.app-shell__body { grid-column: 1; grid-row: 1; min-width: 0; min-height: auto; display: flex; flex-direction: column; }
 .app-sidebar {
   position: sticky;
   top: 0;
@@ -368,6 +369,7 @@ textarea {
 .app-topbar__identity { display: flex; min-width: 0; align-items: center; gap: 0.65rem; }
 .app-topbar__identity > span { overflow: hidden; color: var(--sc-muted); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.01em; text-overflow: ellipsis; white-space: nowrap; }
 .app-topbar__user { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; }
+.app-topbar__contact { padding-right: 0.75rem; border-right: 1px solid var(--sc-border); color: var(--sc-muted); font-size: 0.72rem; line-height: 1.35; text-align: right; white-space: nowrap; }
 .app-topbar__logout { display: grid; width: 2rem; height: 2rem; place-items: center; padding: 0; border: 0; border-radius: 0.45rem; background: transparent; color: var(--sc-muted); }
 .app-topbar__logout svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.75; }
 .app-topbar__logout:hover { color: var(--sc-accent); background: var(--sc-accent-soft); }
@@ -388,55 +390,43 @@ textarea {
   flex-direction: column;
 }
 
-.request-buffer {
-  position: fixed;
-  right: calc(340px + 1rem);
-  top: 4.55rem;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--sc-surface) 92%, transparent);
-  box-shadow: var(--sc-shadow);
-  pointer-events: none;
-}
-
-body.is-requesting,
-body.is-requesting * {
-  cursor: progress !important;
-}
-
 .vitals-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.65rem; }
 .vitals-grid > div { display: grid; gap: 0.15rem; padding: 0.65rem; background: var(--sc-surface-muted); border-radius: 10px; }
 .vitals-grid small { color: var(--sc-muted); }
 
 .app-footer {
+  flex: 0 0 auto;
   border-top: 1px solid var(--sc-border);
   background: var(--sc-surface-muted);
-  padding: clamp(0.85rem, 2vw, 1.15rem) clamp(0.9rem, 2.5vw, 1.5rem);
-  margin-top: auto;
+  padding: 0.5rem clamp(0.9rem, 2.5vw, 1.5rem);
 }
 
 .app-footer__inner {
   width: min(100%, 1100px);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 0.9rem 2rem;
-  align-items: flex-start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 0.35rem 1.25rem;
+  align-items: center;
 }
 .app-footer__inner > div { min-width: 0; overflow-wrap: anywhere; }
 
 /* Persistent Swify workspace rail */
-.swify-rail { position: sticky; top: 0; display: grid; flex: 0 0 340px; height: calc(100vh - 3.8rem); grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto; gap: 0.7rem; padding: 1rem; border-left: 1px solid var(--sc-border); background: #f2f6f0; box-sizing: border-box; }
+.swify-rail { position: sticky; top: 0; grid-column: 2; grid-row: 1; display: grid; min-width: 0; min-height: 0; height: 100%; grid-template-rows: auto minmax(0, 1fr); gap: 0.7rem; padding: 1rem; border-left: 1px solid var(--sc-border); background: #f2f6f0; box-sizing: border-box; }
+.swify-rail__header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
 .swify-rail__header strong { display: block; font-family: var(--sc-font-display); font-size: 1.2rem; }
 .swify-rail__header span, .swify-rail__hint, .swify-rail__disclaimer { color: var(--sc-muted); font-size: 0.76rem; line-height: 1.4; }
 .swify-rail__header span { display: block; margin-top: 0.1rem; }
+.swify-rail__toggle { display: grid; width: 2rem; height: 2rem; flex: 0 0 2rem; place-items: center; padding: 0; border: 0; border-radius: 0.45rem; background: transparent; color: var(--sc-muted); }
+.swify-rail__toggle:hover { color: var(--sc-accent); background: var(--sc-accent-soft); }
+.swify-rail__toggle svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.9; }
+.swify-rail__expand-label { display: none; }
+.swify-rail__collapsed-notice { display: none; }
+.swify-rail__panel-content { display: grid; min-height: 0; grid-template-rows: auto auto minmax(0, 1fr) auto auto; gap: 0.7rem; }
 .swify-rail__modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.25rem; padding: 0.2rem; border-radius: 0.55rem; background: rgba(255, 255, 255, 0.7); }
 .swify-rail__modes button { min-width: 0; padding: 0.4rem 0.2rem; border: 0; border-radius: 0.4rem; background: transparent; color: var(--sc-muted); font-size: 0.72rem; font-weight: 700; }
 .swify-rail__modes button.active { background: var(--sc-surface); color: var(--sc-ink); box-shadow: 0 1px 2px rgba(20, 42, 31, 0.1); }
+.swify-rail__context { display: grid; gap: 0.5rem; }
 .swify-rail__hint { min-height: 2.2rem; margin: 0; }
 .swify-rail__resources { display: grid; gap: 0.25rem; padding: 0.65rem; border-radius: 0.55rem; background: var(--sc-accent-soft); font-size: 0.78rem; }
 .swify-rail__resources span { color: var(--sc-muted); font-weight: 700; }
@@ -445,8 +435,27 @@ body.is-requesting * {
 .swify-rail__message { max-width: 94%; padding: 0.5rem 0.65rem; border-radius: 0.55rem; font-size: 0.84rem; line-height: 1.45; overflow-wrap: anywhere; }
 .swify-rail__message.user { justify-self: end; background: var(--sc-accent-soft); }
 .swify-rail__message.assistant { background: var(--sc-surface-muted); }
+.swify-rail__reply-text { white-space: pre-line; }
 .swify-rail__loading { display: flex; align-items: center; gap: 0.45rem; color: var(--sc-muted); }
 .swify-rail__disclaimer { margin: 0; }
+.swify-rail.is-collapsed { align-items: start; justify-items: center; padding-inline: 0.7rem; }
+.swify-rail.is-collapsed .swify-rail__header > div { display: none; }
+.swify-rail.is-collapsed .swify-rail__toggle { color: var(--sc-accent); background: var(--sc-accent-soft); }
+.swify-rail.is-collapsed .swify-rail__panel-content { display: none; }
+.swify-rail.is-collapsed .swify-rail__collapsed-notice { position: absolute; top: 1rem; right: calc(100% + 0.6rem); z-index: 3; display: grid; width: 13.5rem; gap: 0.15rem; padding: 0.7rem 0.8rem; border: 1px solid var(--sc-border); border-radius: 0.65rem; background: var(--sc-surface); box-shadow: var(--sc-shadow); color: var(--sc-ink); font-size: 0.74rem; line-height: 1.35; }
+.swify-rail__collapsed-notice span { color: var(--sc-muted); }
+.swify-patient-choices { display: grid; gap: 0.45rem; margin-top: 0.65rem; }
+.swify-patient-choices__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; color: var(--sc-ink); }
+.swify-patient-choices__heading span, .swify-patient-choice span, .swify-patient-choice small { color: var(--sc-muted); font-size: 0.74rem; }
+.swify-patient-choices__list { display: grid; gap: 0.4rem; max-height: 25rem; overflow: auto; padding-right: 0.1rem; }
+.swify-patient-choice { display: grid; gap: 0.25rem; padding: 0.55rem; border: 1px solid var(--sc-border); border-radius: 0.5rem; background: var(--sc-surface); }
+.swify-patient-choice.selected { border-color: var(--sc-accent); box-shadow: 0 0 0 2px var(--sc-accent-soft); }
+.swify-patient-choice > div:first-child { display: grid; gap: 0.1rem; }
+.swify-patient-choice__actions { display: flex; align-items: center; gap: 0.65rem; margin-top: 0.1rem; }
+.swify-patient-choice__actions button { min-height: auto; padding: 0; font-size: 0.74rem; font-weight: 700; }
+
+.queue-pagination { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.3rem; color: var(--sc-muted); font-size: 0.84rem; }
+.queue-pagination button { min-width: 5.5rem; }
 
 /* Care Signals dashboard */
 .care-signals__intro h1 { margin: 0; font-family: var(--sc-font-display); font-size: clamp(2rem, 4vw, 3rem); }
@@ -484,15 +493,24 @@ body.is-requesting * {
 
 @media (max-width: 860px) {
   .app-shell { flex-direction: column; }
-  .app-shell__content { flex-direction: column; }
+  .app-shell__content { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
+  .app-shell__body { grid-column: 1; grid-row: 1; }
+  .swify-rail { grid-column: 1; grid-row: 2; }
   .app-sidebar, .app-sidebar.is-collapsed { position: static; width: 100%; height: auto; flex-basis: auto; gap: 0.8rem; border-right: 0; border-bottom: 1px solid var(--sc-border); }
   .app-sidebar.is-collapsed .app-sidebar__nav { display: flex; }
   .app-sidebar.is-collapsed .app-sidebar__label { display: inline; }
   .app-sidebar.is-collapsed .app-sidebar__nav a { justify-content: flex-start; padding-inline: 0.55rem; }
   .app-sidebar__nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .app-sidebar__nav a { min-height: auto; padding: 0.35rem 0.55rem; }
+  .app-topbar__contact { display: none; }
+  .app-shell__content.is-swify-collapsed { grid-template-columns: minmax(0, 1fr); }
   .swify-rail { position: static; width: 100%; height: auto; min-height: 25rem; flex-basis: auto; border-top: 1px solid var(--sc-border); border-left: 0; }
-  .request-buffer { right: 1rem; }
+  .swify-rail.is-collapsed { min-height: 0; padding: 0.7rem 1rem; justify-items: stretch; }
+  .swify-rail.is-collapsed .swify-rail__header { align-items: center; }
+  .swify-rail.is-collapsed .swify-rail__header > div { display: block; }
+  .swify-rail.is-collapsed .swify-rail__header span { display: none; }
+  .swify-rail.is-collapsed .swify-rail__expand-label { display: none; }
+  .swify-rail.is-collapsed .swify-rail__collapsed-notice { position: static; justify-self: start; width: auto; margin-top: -0.35rem; padding: 0.45rem 0.6rem; box-shadow: none; background: var(--sc-accent-soft); }
   .home-layout {
     grid-template-columns: 1fr;
   }
