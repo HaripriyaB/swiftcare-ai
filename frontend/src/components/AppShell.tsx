@@ -13,11 +13,19 @@ const navigationItems = [
 ]
 
 const PageHeaderMetaContext = createContext<((content: ReactNode | null) => void) | null>(null)
+const SwifyPatientContext = createContext<((patientId: string | null) => void) | null>(null)
 
 export function usePageHeaderMeta() {
   const setHeaderMeta = useContext(PageHeaderMetaContext)
   if (!setHeaderMeta) throw new Error('usePageHeaderMeta must be used inside AppShell')
   return setHeaderMeta
+}
+
+/** Sets the patient Swify should use as context outside the patient-record route. */
+export function useSwifyPatientContext() {
+  const setPatientId = useContext(SwifyPatientContext)
+  if (!setPatientId) throw new Error('useSwifyPatientContext must be used inside AppShell')
+  return setPatientId
 }
 
 function NavigationIcon({ name }: { name: string }) {
@@ -37,6 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [navigationExpanded, setNavigationExpanded] = useState(true)
   const [swifyExpanded, setSwifyExpanded] = useState(true)
   const [headerMeta, setHeaderMeta] = useState<ReactNode | null>(null)
+  const [swifyPatientId, setSwifyPatientId] = useState<string | null>(null)
   const pageTitle = location.pathname === '/' ? 'Attention queue'
     : location.pathname === '/patients' ? 'Patients'
       : location.pathname === '/insights' ? 'Care dashboard'
@@ -49,6 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <PageHeaderMetaContext.Provider value={setHeaderMeta}>
+    <SwifyPatientContext.Provider value={setSwifyPatientId}>
     <div className="app-shell">
       <aside className={`app-sidebar ${navigationExpanded ? '' : 'is-collapsed'}`}>
         <div className="app-sidebar__brand">
@@ -110,10 +120,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               {children}
             </main>
           </div>
-          <ChatPanel expanded={swifyExpanded} onExpandedChange={setSwifyExpanded} />
+          <ChatPanel patientId={swifyPatientId} expanded={swifyExpanded} onExpandedChange={setSwifyExpanded} />
         </div>
       </div>
     </div>
+    </SwifyPatientContext.Provider>
     </PageHeaderMetaContext.Provider>
   )
 }

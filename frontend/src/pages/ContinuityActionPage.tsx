@@ -5,6 +5,7 @@ import { getSummary } from '../api/patients'
 import type { ContinuityCard, PatientSummary } from '../api/types'
 import { displayFullPatientName } from '../utils/displayPatientName'
 import { LoadingPanel } from '../components/LoadingPanel'
+import { useSwifyPatientContext } from '../components/AppShell'
 import { readPageMemory, writePageMemory } from '../utils/pageMemory'
 
 const outcomes = [
@@ -20,6 +21,7 @@ type ActionSnapshot = { card: ContinuityCard; patient: PatientSummary | null }
 
 export function ContinuityActionPage() {
   const { cardId = '' } = useParams()
+  const setSwifyPatientId = useSwifyPatientContext()
   const cacheKey = `continuity-action:${cardId}`
   const restored = readPageMemory<ActionSnapshot>(cacheKey)
   const [card, setCard] = useState<ContinuityCard | null>(() => restored?.card ?? null)
@@ -29,6 +31,12 @@ export function ContinuityActionPage() {
   const [busy, setBusy] = useState(false)
   const [patient, setPatient] = useState<PatientSummary | null>(() => restored?.patient ?? null)
   const [contextError, setContextError] = useState<string | null>(null)
+
+  // A queue card is patient-specific, so keep Swify grounded in that record while it is open.
+  useEffect(() => {
+    setSwifyPatientId(card?.patient_id ?? null)
+    return () => setSwifyPatientId(null)
+  }, [card?.patient_id, setSwifyPatientId])
 
   useEffect(() => {
     if (card) writePageMemory(cacheKey, { card, patient })

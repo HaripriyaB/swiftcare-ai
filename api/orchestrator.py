@@ -112,6 +112,55 @@ def is_operational_queue_request(message: str) -> bool:
     return has_queue_subject and has_request
 
 
+def is_attention_reason_request(message: str, *, has_active_patient: bool) -> bool:
+    """Recognize requests for the operational evidence behind an open card.
+
+    This is deliberately handled without an LLM. A question such as "why does
+    this patient need attention?" is asking for the exact queue rationale, not
+    for clinical advice or a model interpretation of the chart.
+    """
+    if not has_active_patient:
+        return False
+    text = (message or "").lower()
+    asks_why = any(phrase in text for phrase in (
+        "why", "what needs attention", "reason for attention", "attention today",
+    ))
+    mentions_attention = any(term in text for term in (
+        "attention", "priority", "queue", "follow-up", "follow up", "care gap",
+    ))
+    return asks_why and mentions_attention
+
+
+def attention_reason_reply(patient_id: str) -> str:
+    """Return the stored, operational reason and evidence for one open card."""
+    try:
+        from api.continuity import get_open_card_for_patient
+
+        card = get_open_card_for_patient(patient_id)
+    except Exception:
+        return "I couldn’t load this patient’s attention-queue evidence right now. Please try again."
+
+    if not card:
+        return "This patient does not currently have an open Attention Queue item."
+
+    priority = str(card.get("priority") or "").title()
+    action = str(card.get("action_label") or "Review the record")
+    reason = str(card.get("why_now") or "No additional operational rationale is recorded.")
+    lines = [
+        f"This patient has an open {priority} priority item: {action}.",
+        reason,
+    ]
+    evidence = card.get("evidence") or []
+    if evidence:
+        lines.append("Evidence on the queue card:")
+        for item in evidence:
+            label = str(item.get("label") or "Recorded evidence")
+            value = str(item.get("value") or "Not recorded")
+            lines.append(f"• {label}: {value}")
+    lines.append("This is an operational work item for staff review, not a diagnosis.")
+    return "\n".join(lines)
+
+
 def _queue_patients(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert operational cards into the same compact patient cards used by Swify."""
     seen: set[str] = set()
@@ -383,6 +432,17 @@ async def handle_chat(
             "cards": [],
             "alerts": [],
             "patients": [],
+        }
+
+    if patient_id and is_attention_reason_request(
+        message, has_active_patient=True
+    ):
+        return {
+            "reply": with_patient_name(attention_reason_reply(patient_id), patient_id),
+            "agent_type": "queue_evidence",
+            "patient_id": patient_id,
+            "citations": [{"view": "swiftcare_ops.continuity_cards"}],
+            "cards": [], "alerts": [], "patients": [],
         }
 
     if is_today_priority_request(message):

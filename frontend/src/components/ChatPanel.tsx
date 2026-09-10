@@ -106,7 +106,8 @@ export function ChatPanel({
   const [listening, setListening] = useState(false)
   const recognitionRef = useRef<SpeechRecognizer | null>(null)
 
-  const activePatientId = patientId ?? routePatientId ?? selectedPatient?.patient_id ?? null
+  // A directly opened patient record always wins over any previously opened queue card.
+  const activePatientId = routePatientId ?? patientId ?? selectedPatient?.patient_id ?? null
 
   useEffect(() => {
     writePageMemory(cacheKey, { input, msgs, selectedPatient })
