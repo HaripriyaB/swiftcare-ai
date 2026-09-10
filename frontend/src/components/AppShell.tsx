@@ -1,7 +1,6 @@
-import { NavLink } from 'react-router-dom'
-import { useState, type ReactNode } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { DemoBanner } from './DemoBanner'
 import { BrandLockup } from './BrandLockup'
 import { ChatPanel } from './ChatPanel'
 
@@ -12,6 +11,14 @@ const navigationItems = [
   { to: '/history', label: 'Work history', icon: 'history' },
   { to: '/account', label: 'Account settings', icon: 'settings' },
 ]
+
+const PageHeaderMetaContext = createContext<((content: ReactNode | null) => void) | null>(null)
+
+export function usePageHeaderMeta() {
+  const setHeaderMeta = useContext(PageHeaderMetaContext)
+  if (!setHeaderMeta) throw new Error('usePageHeaderMeta must be used inside AppShell')
+  return setHeaderMeta
+}
 
 function NavigationIcon({ name }: { name: string }) {
   const common = { viewBox: '0 0 24 24', 'aria-hidden': true, focusable: false }
@@ -25,31 +32,31 @@ function NavigationIcon({ name }: { name: string }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth()
+  const location = useLocation()
   const looker = import.meta.env.VITE_LOOKER_STUDIO_URL
   const [navigationExpanded, setNavigationExpanded] = useState(true)
   const [swifyExpanded, setSwifyExpanded] = useState(true)
+  const [headerMeta, setHeaderMeta] = useState<ReactNode | null>(null)
+  const pageTitle = location.pathname === '/' ? 'Attention queue'
+    : location.pathname === '/patients' ? 'Patients'
+      : location.pathname === '/insights' ? 'Care dashboard'
+        : location.pathname === '/history' ? 'Work history'
+          : location.pathname === '/account' ? 'Account settings'
+            : location.pathname.startsWith('/patient/') ? 'Patient record'
+              : location.pathname.startsWith('/continuity/') ? 'Review action'
+                : location.pathname.startsWith('/history/') ? 'Work history'
+                  : 'SwiftCare AI'
 
   return (
+    <PageHeaderMetaContext.Provider value={setHeaderMeta}>
     <div className="app-shell">
       <aside className={`app-sidebar ${navigationExpanded ? '' : 'is-collapsed'}`}>
-        <button
-          type="button"
-          className="app-sidebar__toggle"
-          aria-expanded={navigationExpanded}
-          aria-controls="primary-navigation"
-          aria-label={navigationExpanded ? 'Collapse side navigation' : 'Expand side navigation'}
-          title={navigationExpanded ? 'Collapse side navigation' : 'Expand side navigation'}
-          onClick={() => setNavigationExpanded((expanded) => !expanded)}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M9 4v16" />
-            {navigationExpanded ? (
-              <path d="m14.5 9-3 3 3 3" />
-            ) : (
-              <path d="m10.5 9 3 3-3 3" />
-            )}
-          </svg>
-        </button>
+        <div className="app-sidebar__brand">
+          <div className="app-sidebar__brand-row">
+            <BrandLockup to="/" size="sm" />
+          </div>
+          <p>Patient continuity intelligence</p>
+        </div>
         <nav id="primary-navigation" className="app-sidebar__nav" aria-label="Primary navigation">
             {navigationItems.map((item) => <NavLink key={item.to} to={item.to} end={item.end} title={item.label}>
               <span className="app-sidebar__icon"><NavigationIcon name={item.icon} /></span>
@@ -62,14 +69,31 @@ export function AppShell({ children }: { children: ReactNode }) {
               </a>
             ) : null}
           </nav>
+        <div className="app-sidebar__clinic" aria-label="Clinic information">
+          <strong>SwiftCare Clinic</strong>
+          <span>Campus hours</span>
+          <small>Mon–Fri 07:00–20:00<br />Sat 08:00–14:00</small>
+        </div>
+        <button
+          type="button"
+          className="app-sidebar__edge-toggle"
+          aria-expanded={navigationExpanded}
+          aria-controls="primary-navigation"
+          aria-label={navigationExpanded ? 'Collapse side navigation' : 'Expand side navigation'}
+          title={navigationExpanded ? 'Collapse side navigation' : 'Expand side navigation'}
+          onClick={() => setNavigationExpanded((expanded) => !expanded)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            {navigationExpanded ? <path d="m14 7-5 5 5 5" /> : <path d="m10 7 5 5-5 5" />}
+          </svg>
+        </button>
       </aside>
       <div className="app-shell__workspace">
-        <DemoBanner />
         <header className="app-topbar">
           <div className="app-topbar__brand">
-            <div className="app-topbar__identity">
-              <BrandLockup to="/" size="md" />
-              <span>Front desk · SwiftCare Clinic</span>
+            <div className="app-topbar__page-heading">
+              <strong>{pageTitle}</strong>
+              {headerMeta}
             </div>
           </div>
           <div className="app-topbar__user">
@@ -88,18 +112,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <ChatPanel expanded={swifyExpanded} onExpandedChange={setSwifyExpanded} />
         </div>
-        <footer className="app-footer">
-          <div className="app-footer__inner">
-            <div>
-              <strong style={{ fontFamily: 'var(--sc-font-display)' }}>SwiftCare Clinic</strong>
-              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
-                Campus hours Mon–Fri 07:00–20:00 · Sat 08:00–14:00
-              </p>
-            </div>
-            <div className="muted" style={{ fontSize: '0.85rem' }}>Synthetic demo data · Operational support only.</div>
-          </div>
-        </footer>
       </div>
     </div>
+    </PageHeaderMetaContext.Provider>
   )
 }

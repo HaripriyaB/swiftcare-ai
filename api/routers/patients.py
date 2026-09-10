@@ -22,10 +22,12 @@ from agents.suggestion.tools.advisory_cards import (
 from api.auth import CurrentUser, get_current_user
 from api.access import audit_access, require_patient_access, require_population_access
 from api.bq_conditions import list_conditions
+from api.fhir_findings import list_fhir_clinical_findings
 from api.export_builder import build_export_envelope, envelope_to_csv
 from api import symptoms as symptoms_mod
 from api import continuity
 from api import local_demo
+from api.orchestrator import handle_chat
 
 router = APIRouter(tags=["patients"])
 
@@ -107,6 +109,32 @@ def patient_conditions(
     )
     audit_access(user, patient_id, "view_conditions")
     return rows
+
+
+@router.get("/patients/{patient_id}/fhir-findings")
+def patient_fhir_findings(
+    patient_id: str,
+    user: CurrentUser = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    require_patient_access(user, patient_id)
+    rows = (
+        local_demo.clinical_findings_for(patient_id)
+        if local_demo.enabled()
+        else list_fhir_clinical_findings(patient_id)
+    )
+    audit_access(user, patient_id, "view_fhir_findings")
+    return rows
+
+
+@router.get("/patients/{patient_id}/attention-card")
+def patient_attention_card(
+    patient_id: str,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict[str, Any] | None:
+    require_patient_access(user, patient_id)
+    row = continuity.get_open_card_for_patient(patient_id)
+    audit_access(user, patient_id, "view_attention_card")
+    return row
 
 
 @router.get("/patients/{patient_id}/medications")
@@ -298,6 +326,31 @@ def create_patient_advisory_card(
         raise _err(400, str(result["error"]), str(result["error"]))
     audit_access(user, patient_id, "create_advisory")
     return result
+
+
+@router.post("/patients/{patient_id}/generate-next-steps")
+async def generate_patient_next_steps(
+    patient_id: str,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Explicitly request source-grounded operational cards from the Suggestion agent."""
+    require_patient_access(user, patient_id, action="write")
+    if local_demo.enabled():
+        raise _err(501, "not_supported", "AI next-step generation requires the deployed Gemini service")
+    response = await handle_chat(
+        message=(
+            "Review this patient's source-recorded chart context and create up to three "
+            "dismissible operational advisory cards. Use the available tools for evidence. "
+            "Do not diagnose, prescribe, or make a clinical treatment recommendation."
+        ),
+        user_id=user.user_id,
+        patient_id=patient_id,
+        session_id=None,
+        mode="ask",
+    )
+    rows = list_advisory_cards(patient_id, include_dismissed=False)
+    audit_access(user, patient_id, "generate_advisory")
+    return {"cards": rows, "reply": str(response.get("reply") or "")}
 
 
 @router.post("/patients/{patient_id}/advisory-cards/{card_id}/dismiss")

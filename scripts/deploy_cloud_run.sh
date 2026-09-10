@@ -43,6 +43,7 @@ SUBSTITUTIONS+="|_GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI:-TRUE}"
 SUBSTITUTIONS+="|_VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
 SUBSTITUTIONS+="|_VITE_AUTH_BYPASS=false"
 SUBSTITUTIONS+="|_VITE_DEMO_BANNER=${VITE_DEMO_BANNER:-false}"
+SUBSTITUTIONS+="|_VITE_ENABLE_CHAT=${VITE_ENABLE_CHAT:-true}"
 # Firebase web settings are supplied as Cloud Build secretEnv values by
 # cloudbuild.yaml; do not pass duplicate substitutions.
 

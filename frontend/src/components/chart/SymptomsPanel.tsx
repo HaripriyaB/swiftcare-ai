@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import type { Symptom, SymptomReportedBy } from '../../api/types'
+import type { FhirClinicalFinding, Symptom, SymptomReportedBy } from '../../api/types'
 import { SYMPTOMS_TITLE } from '../../api/types'
 
 export function SymptomsPanel({
   symptoms,
+  fhirFindings,
   onAdd,
   onResolve,
 }: {
   symptoms: Symptom[]
+  fhirFindings: FhirClinicalFinding[]
   onAdd: (description: string, reported_by: SymptomReportedBy) => Promise<void>
   onResolve: (id: string) => Promise<void>
 }) {
@@ -31,6 +33,18 @@ export function SymptomsPanel({
   return (
     <section className="panel stack">
       <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{SYMPTOMS_TITLE}</h2>
+      <div className="patient-source-section">
+        <strong>FHIR chart findings</strong>
+        <p className="muted">Conditions and symptom-relevant observations from the source chart.</p>
+        {!fhirFindings.length ? <p className="empty">No symptom-relevant FHIR observations are available.</p> : fhirFindings.slice(0, 6).map((finding) => (
+          <div key={finding.finding_id} className="list-row">
+            <div><strong>{finding.display_name}</strong><p className="muted" style={{ margin: '0.2rem 0 0', fontSize: '0.8rem' }}>{finding.source_kind}{finding.value_text ? ` · ${finding.value_text}` : ''}{finding.recorded_date ? ` · ${finding.recorded_date}` : ''}</p></div>
+          </div>
+        ))}
+      </div>
+      <div className="patient-source-section">
+        <strong>Active recorded symptoms</strong>
+        <p className="muted">Patient-reported or staff-added operational symptoms.</p>
       {!active.length ? <p className="empty">No symptoms recorded yet.</p> : null}
       {active.map((s) => (
         <div key={s.symptom_id} className="list-row">
@@ -54,6 +68,7 @@ export function SymptomsPanel({
           </button>
         </div>
       ))}
+      </div>
       <form className="stack" onSubmit={(e) => void submit(e)}>
         <label>
           Add symptom

@@ -28,6 +28,7 @@ steps:
           --build-arg "VITE_API_BASE_URL=${_VITE_API_BASE_URL}" \
           --build-arg "VITE_AUTH_BYPASS=${_VITE_AUTH_BYPASS}" \
           --build-arg "VITE_DEMO_BANNER=${_VITE_DEMO_BANNER}" \
+          --build-arg "VITE_ENABLE_CHAT=${_VITE_ENABLE_CHAT}" \
           --build-arg "VITE_FIREBASE_API_KEY=$$VITE_FIREBASE_API_KEY" \
           --build-arg "VITE_FIREBASE_AUTH_DOMAIN=$$VITE_FIREBASE_AUTH_DOMAIN" \
           --build-arg "VITE_FIREBASE_PROJECT_ID=$$VITE_FIREBASE_PROJECT_ID" \
@@ -73,6 +74,7 @@ substitutions:
   _VITE_API_BASE_URL: /api
   _VITE_AUTH_BYPASS: "false"
   _VITE_DEMO_BANNER: "false"
+  _VITE_ENABLE_CHAT: "true"
   # Optional; empty → ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_SERVICE}:$SHORT_SHA
   _IMAGE: ""
 availableSecrets:

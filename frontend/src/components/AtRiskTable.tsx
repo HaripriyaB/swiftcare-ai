@@ -7,11 +7,17 @@ import { toCsv } from '../utils/toCsv'
 export function AtRiskTable({
   patients,
   onOpen,
+  page,
+  hasNextPage,
+  onPageChange,
   title = 'Affected patients',
   description,
 }: {
   patients: AtRiskPatient[]
   onOpen: (id: string) => void
+  page: number
+  hasNextPage: boolean
+  onPageChange: (page: number) => void
   title?: string
   description?: string
 }) {
@@ -58,28 +64,37 @@ export function AtRiskTable({
       {!patients.length ? (
         <p className="empty">No patients in this filter.</p>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">What to review</th>
-              <th scope="col">Level</th>
-            </tr>
-          </thead>
-          <tbody>
-            {patients.map((p) => (
-              <tr key={p.patient_id} onClick={() => onOpen(p.patient_id)}>
-                <td>
-                  {displayPatientName(p.display_first_name, p.display_last_name)}
-                </td>
-                <td>{PLAIN_RISK_LABELS[p.risk_flag] ?? p.risk_flag}</td>
-                <td>
-                  <span className={`chip ${p.risk_level}`}>{p.risk_level}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <div className="at-risk-table__scroll" tabIndex={0} aria-label="Affected patient records">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">What to review</th>
+                  <th scope="col">Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patients.map((p) => (
+                  <tr key={p.patient_id} onClick={() => onOpen(p.patient_id)}>
+                    <td>
+                      {displayPatientName(p.display_first_name, p.display_last_name)}
+                    </td>
+                    <td>{PLAIN_RISK_LABELS[p.risk_flag] ?? p.risk_flag}</td>
+                    <td>
+                      <span className={`chip ${p.risk_level}`}>{p.risk_level}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {(page > 0 || hasNextPage) ? <nav className="queue-pagination at-risk-table__pagination" aria-label="Affected patient pages">
+            <button type="button" className="ghost" disabled={page === 0} onClick={() => onPageChange(page - 1)}>Previous</button>
+            <span>Page {page + 1}</span>
+            <button type="button" className="ghost" disabled={!hasNextPage} onClick={() => onPageChange(page + 1)}>Next</button>
+          </nav> : null}
+        </>
       )}
     </section>
   )

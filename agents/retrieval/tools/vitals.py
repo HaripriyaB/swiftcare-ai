@@ -33,4 +33,9 @@ LIMIT 1
         row_count=row_count,
         latency_ms=latency_ms,
     )
-    return rows[0] if rows else None
+    row = rows[0] if rows else {"patient_id": patient_id}
+
+    # Blood group is not recorded for every Synthea patient. Preserve that
+    # absence explicitly for the UI rather than presenting an inferred value.
+    row.setdefault("blood_group", None)
+    return row

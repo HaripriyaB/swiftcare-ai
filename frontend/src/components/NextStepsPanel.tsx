@@ -6,12 +6,15 @@ import { AdvisoryCardRow } from './AdvisoryCard'
 export function NextStepsPanel({
   cards,
   onDismiss,
+  onGenerate,
 }: {
   cards: AdvisoryCard[]
   onDismiss: (id: string) => void
+  onGenerate: () => Promise<void>
 }) {
   const visible = cards.filter((c) => !c.dismissed)
   const [showAll, setShowAll] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const shown = showAll ? visible : visible.slice(0, 3)
 
   return (
@@ -23,7 +26,15 @@ export function NextStepsPanel({
         </p>
       </div>
       {!shown.length ? (
-        <p className="empty">No open next steps.</p>
+        <div className="stack">
+          <p className="empty">No open next steps yet.</p>
+          <button type="button" className="primary" disabled={generating} onClick={() => void (async () => {
+            setGenerating(true)
+            try { await onGenerate() } finally { setGenerating(false) }
+          })()}>
+            {generating ? 'Generating source-grounded next steps…' : 'Generate AI next steps'}
+          </button>
+        </div>
       ) : (
         shown.map((c) => (
           <AdvisoryCardRow key={c.card_id} card={c} onDismiss={onDismiss} />

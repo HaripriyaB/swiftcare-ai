@@ -1,10 +1,15 @@
 import type { Vitals } from '../../api/types'
 
+function formatMeasure(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
 export function VitalsPanel({ vitals, loading = false }: { vitals: Vitals | null; loading?: boolean }) {
   const metrics = vitals ? [
-    ['Blood pressure', vitals.systolic_bp != null && vitals.diastolic_bp != null ? `${vitals.systolic_bp}/${vitals.diastolic_bp} mmHg` : null],
-    ['Heart rate', vitals.heart_rate != null ? `${vitals.heart_rate} bpm` : null],
-    ['Respiratory rate', vitals.respiratory_rate != null ? `${vitals.respiratory_rate} /min` : null],
+    ['Blood group', vitals.blood_group ?? 'Not recorded in FHIR chart'],
+    ['Blood pressure', vitals.systolic_bp != null && vitals.diastolic_bp != null ? `${formatMeasure(vitals.systolic_bp)}/${formatMeasure(vitals.diastolic_bp)} mmHg` : null],
+    ['Heart rate', vitals.heart_rate != null ? `${formatMeasure(vitals.heart_rate)} bpm` : null],
+    ['Respiratory rate', vitals.respiratory_rate != null ? `${formatMeasure(vitals.respiratory_rate)} /min` : null],
     ['Weight', vitals.weight_kg != null ? `${vitals.weight_kg.toFixed(1)} kg` : null],
     ['Height', vitals.height_cm != null ? `${vitals.height_cm.toFixed(1)} cm` : null],
     ['BMI', vitals.bmi != null ? vitals.bmi.toFixed(1) : null],

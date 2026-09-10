@@ -189,6 +189,20 @@ def get_card(card_id: str) -> dict[str, Any] | None:
     return _cached(f"card:{card_id}", lambda: _get_card(card_id))
 
 
+def get_open_card_for_patient(patient_id: str) -> dict[str, Any] | None:
+    sql = f"""
+SELECT card_id, patient_id, patient_name, priority, priority_score, action_type,
+       action_label, why_now, evidence_json, status, rule_version, created_at, updated_at
+FROM {fq('swiftcare_ops', 'continuity_cards')}
+WHERE patient_id = @patient_id AND status IN ('OPEN', 'IN_PROGRESS')
+ORDER BY CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
+         priority_score DESC, created_at DESC
+LIMIT 1
+"""
+    rows, _, _ = run_query(sql, {"patient_id": patient_id})
+    return _hydrate(rows[0]) if rows else None
+
+
 def _get_card(card_id: str) -> dict[str, Any] | None:
     sql = f"""
 SELECT card_id, patient_id, patient_name, priority, priority_score, action_type,

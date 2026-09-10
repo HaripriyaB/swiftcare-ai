@@ -156,6 +156,8 @@ export interface TimelineEvent {
 
 export interface Vitals {
   patient_id: string
+  /** Blood group is nullable because it is not present for every FHIR patient. */
+  blood_group?: string | null
   systolic_bp?: number
   diastolic_bp?: number
   heart_rate?: number
@@ -191,6 +193,16 @@ export interface Symptom {
 export interface SymptomCreateRequest {
   description: string
   reported_by: SymptomReportedBy
+}
+
+export interface FhirClinicalFinding {
+  finding_id: string
+  patient_id: string
+  display_name: string
+  source_kind: 'FHIR Condition' | 'FHIR Observation'
+  recorded_date?: string | null
+  value_text?: string | null
+  attribution: string
 }
 
 export interface AdvisoryContent {

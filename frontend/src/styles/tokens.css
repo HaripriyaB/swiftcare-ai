@@ -1,20 +1,20 @@
 :root {
-  --sc-bg: #f5f7fb;
+  --sc-bg: #edf0ee;
   --sc-surface: #ffffff;
-  --sc-surface-muted: #eef2f7;
-  --sc-ink: #132238;
-  --sc-muted: #617087;
-  --sc-accent: #0f766e;
-  --sc-accent-soft: #dff4ef;
-  --sc-border: #dce4ee;
-  --sc-info: #52657b;
+  --sc-surface-muted: #f3f5f3;
+  --sc-ink: #000402;
+  --sc-muted: #6a6e6c;
+  --sc-accent: #145338;
+  --sc-accent-soft: #e4eee8;
+  --sc-border: #dde2de;
+  --sc-info: #6a6e6c;
   --sc-warn: #9a6700;
   --sc-high: #b42318;
   --sc-medium: #9a6700;
-  --sc-low: #0f766e;
-  --sc-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --sc-font-display: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --sc-radius: 14px;
+  --sc-low: #145338;
+  --sc-font-sans: 'Google Sans', 'Google Sans Text', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --sc-font-display: 'Google Sans', 'Google Sans Display', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --sc-radius: 18px;
   --sc-space: 1.25rem;
-  --sc-shadow: 0 8px 24px rgba(22, 43, 72, 0.06);
+  --sc-shadow: 0 12px 30px rgba(3, 5, 4, 0.045);
 }

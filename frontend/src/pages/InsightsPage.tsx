@@ -20,6 +20,8 @@ type InsightSnapshot = {
   patients: AtRiskPatient[]
   alerts: InsightAlert[]
   completedToday: number
+  patientPage: number
+  hasMorePatients: boolean
 }
 const INSIGHTS_MEMORY_KEY = 'insights'
 
@@ -37,16 +39,22 @@ export function InsightsPage() {
   const [alerts, setAlerts] = useState<InsightAlert[]>(() => restored?.alerts ?? [])
   const [flag, setFlag] = useState(() => restored?.flag ?? 'gap_in_care')
   const [completedToday, setCompletedToday] = useState(() => restored?.completedToday ?? 0)
+  const [patientPage, setPatientPage] = useState(() => restored?.patientPage ?? 0)
+  const [hasMorePatients, setHasMorePatients] = useState(() => restored?.hasMorePatients ?? false)
   const [loading, setLoading] = useState(() => !restored)
   const [signalsLoading, setSignalsLoading] = useState(() => !restored)
   const [error, setError] = useState<string | null>(null)
   const nav = useNavigate()
   const restoredInitialView = useRef(Boolean(restored))
-  const restoredInitialPatients = useRef(Boolean(restored))
+  // Older page-memory snapshots did not include pagination metadata. Refresh
+  // those records so the newly added Next control is calculated from the API.
+  const restoredInitialPatients = useRef(
+    Boolean(restored && typeof restored.hasMorePatients === 'boolean'),
+  )
 
   useEffect(() => {
-    writePageMemory(INSIGHTS_MEMORY_KEY, { flag, dist, patients, alerts, completedToday })
-  }, [flag, dist, patients, alerts, completedToday])
+    writePageMemory(INSIGHTS_MEMORY_KEY, { flag, dist, patients, alerts, completedToday, patientPage, hasMorePatients })
+  }, [flag, dist, patients, alerts, completedToday, patientPage, hasMorePatients])
 
   useEffect(() => {
     if (restoredInitialView.current) {
@@ -79,12 +87,13 @@ export function InsightsPage() {
       setLoading(true)
       setError(null)
       try {
-        const result = await listAtRisk({ risk_flag: flag, limit: 10 })
+        const result = await listAtRisk({ risk_flag: flag, limit: 10, offset: patientPage * 10 })
         setPatients(result.patients)
+        setHasMorePatients(result.has_more)
       } catch (err) { setError(err instanceof Error ? err.message : 'Affected patient group is unavailable.') }
       finally { setLoading(false) }
     })()
-  }, [flag])
+  }, [flag, patientPage])
 
   const selectedSignal = buildCareSignals(dist).find((signal) => signal.flag === flag)
 
@@ -101,13 +110,16 @@ export function InsightsPage() {
           selectedFlag={flag}
           openAlertCount={alerts.filter((alert) => !alert.dismissed).length}
           completedToday={completedToday}
-          onSelectFlag={setFlag}
+          onSelectFlag={(nextFlag) => { setFlag(nextFlag); setPatientPage(0) }}
           onOpenQueue={(nextFlag) => nav(`/?action=${queueActionByFlag[nextFlag]}`)}
         />}
       <div className="care-signals__lower-grid">
         {loading ? <LoadingPanel label="Loading affected patient group…" /> : <AtRiskTable
           patients={patients}
           onOpen={(id) => nav(`/patient/${id}`)}
+          page={patientPage}
+          hasNextPage={hasMorePatients}
+          onPageChange={setPatientPage}
           title={selectedSignal ? `Affected patients · ${selectedSignal.title}` : 'Affected patients'}
           description="This is a patient group for review—not a list of actions to complete."
         />}

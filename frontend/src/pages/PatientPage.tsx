@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  dismissAdvisoryCard,
   getAllergies,
   getConditions,
+  getFhirFindings,
+  getPatientAttentionCard,
   getMedications,
   getSummary,
   getTimeline,
   getVisits,
   getVitals,
-  listAdvisoryCards,
 } from '../api/patients'
 import { addSymptom, listSymptoms, resolveSymptom } from '../api/symptoms'
 import { dismissInsightAlert, listInsightAlerts } from '../api/insights'
 import type {
-  AdvisoryCard,
+  ContinuityCard,
+  FhirClinicalFinding,
   Allergy,
   DiagnosticOutcome,
   InsightAlert,
@@ -34,19 +35,19 @@ import { AllergiesPanel } from '../components/chart/AllergiesPanel'
 import { VisitsPanel } from '../components/chart/VisitsPanel'
 import { TimelinePanel } from '../components/chart/TimelinePanel'
 import { VitalsPanel } from '../components/chart/VitalsPanel'
-import { NextStepsPanel } from '../components/NextStepsPanel'
 import { InsightAlertStrip } from '../components/InsightAlertStrip'
 import { DownloadPatientDetails } from '../components/DownloadPatientDetails'
 import { LoadingPanel } from '../components/LoadingPanel'
 import { readPageMemory, writePageMemory } from '../utils/pageMemory'
 
-type Tab = 'overview' | 'symptoms' | 'outcomes' | 'next' | 'more'
+type Tab = 'overview' | 'symptoms' | 'outcomes' | 'more'
 type PatientSnapshot = {
   tab: Tab
   summary: PatientSummary
   symptoms: Symptom[]
+  fhirFindings: FhirClinicalFinding[]
+  attentionCard: ContinuityCard | null
   outcomes: DiagnosticOutcome[]
-  nextSteps: AdvisoryCard[]
   meds: Medication[]
   allergies: Allergy[]
   visits: Visit[]
@@ -55,13 +56,14 @@ type PatientSnapshot = {
   alerts: InsightAlert[]
 }
 
-type DetailLoading = Record<'symptoms' | 'outcomes' | 'nextSteps' | 'meds' | 'allergies' | 'visits' | 'timeline' | 'vitals' | 'alerts', boolean>
+type DetailLoading = Record<'symptoms' | 'fhirFindings' | 'attentionCard' | 'outcomes' | 'meds' | 'allergies' | 'visits' | 'timeline' | 'vitals' | 'alerts', boolean>
 
 function detailLoading(value: boolean): DetailLoading {
   return {
     symptoms: value,
+    fhirFindings: value,
+    attentionCard: value,
     outcomes: value,
-    nextSteps: value,
     meds: value,
     allergies: value,
     visits: value,
@@ -78,8 +80,9 @@ export function PatientPage() {
   const [tab, setTab] = useState<Tab>(() => restored?.tab ?? 'overview')
   const [summary, setSummary] = useState<PatientSummary | null>(() => restored?.summary ?? null)
   const [symptoms, setSymptoms] = useState<Symptom[]>(() => restored?.symptoms ?? [])
+  const [fhirFindings, setFhirFindings] = useState<FhirClinicalFinding[]>(() => restored?.fhirFindings ?? [])
+  const [attentionCard, setAttentionCard] = useState<ContinuityCard | null>(() => restored?.attentionCard ?? null)
   const [outcomes, setOutcomes] = useState<DiagnosticOutcome[]>(() => restored?.outcomes ?? [])
-  const [nextSteps, setNextSteps] = useState<AdvisoryCard[]>(() => restored?.nextSteps ?? [])
   const [meds, setMeds] = useState<Medication[]>(() => restored?.meds ?? [])
   const [allergies, setAllergies] = useState<Allergy[]>(() => restored?.allergies ?? [])
   const [visits, setVisits] = useState<Visit[]>(() => restored?.visits ?? [])
@@ -94,15 +97,15 @@ export function PatientPage() {
   useEffect(() => {
     const cached = readPageMemory<PatientSnapshot>(cacheKey)
     if (cached) {
-      setTab(cached.tab); setSummary(cached.summary); setSymptoms(cached.symptoms)
-      setOutcomes(cached.outcomes); setNextSteps(cached.nextSteps); setMeds(cached.meds)
+      setTab(cached.tab); setSummary(cached.summary); setSymptoms(cached.symptoms); setFhirFindings(cached.fhirFindings ?? []); setAttentionCard(cached.attentionCard ?? null)
+      setOutcomes(cached.outcomes); setMeds(cached.meds)
       setAllergies(cached.allergies); setVisits(cached.visits); setTimeline(cached.timeline)
       setVitals(cached.vitals); setAlerts(cached.alerts); setLoading(false); setDetailsLoading(detailLoading(false)); setError(null)
       return
     }
     if (!patientId) return
     let active = true
-    setTab('overview'); setSummary(null); setSymptoms([]); setOutcomes([]); setNextSteps([])
+    setTab('overview'); setSummary(null); setSymptoms([]); setFhirFindings([]); setAttentionCard(null); setOutcomes([])
     setMeds([]); setAllergies([]); setVisits([]); setTimeline([]); setVitals(null); setAlerts([])
     setLoading(true); setDetailsLoading(detailLoading(true)); setError(null)
     void (async () => {
@@ -118,8 +121,9 @@ export function PatientPage() {
           })
       }
       loadDetail('symptoms', listSymptoms(patientId), setSymptoms)
+      loadDetail('fhirFindings', getFhirFindings(patientId), setFhirFindings)
+      loadDetail('attentionCard', getPatientAttentionCard(patientId), setAttentionCard)
       loadDetail('outcomes', getConditions(patientId), setOutcomes)
-      loadDetail('nextSteps', listAdvisoryCards(patientId), setNextSteps)
       loadDetail('meds', getMedications(patientId), setMeds)
       loadDetail('allergies', getAllergies(patientId), setAllergies)
       loadDetail('visits', getVisits(patientId), setVisits)
@@ -141,8 +145,8 @@ export function PatientPage() {
 
   useEffect(() => {
     if (!summary || summary.patient_id !== patientId) return
-    writePageMemory(cacheKey, { tab, summary, symptoms, outcomes, nextSteps, meds, allergies, visits, timeline, vitals, alerts })
-  }, [cacheKey, patientId, tab, summary, symptoms, outcomes, nextSteps, meds, allergies, visits, timeline, vitals, alerts])
+    writePageMemory(cacheKey, { tab, summary, symptoms, fhirFindings, attentionCard, outcomes, meds, allergies, visits, timeline, vitals, alerts })
+  }, [cacheKey, patientId, tab, summary, symptoms, fhirFindings, attentionCard, outcomes, meds, allergies, visits, timeline, vitals, alerts])
 
   const copyId = async () => {
     setError(null)
@@ -175,7 +179,10 @@ export function PatientPage() {
       <Link className="patient-record__back" to="/patients">← Patient search</Link>
       {loading && !summary ? <LoadingPanel label="Loading this patient record…" /> : <>
       <div className="panel stack">
-        <SummaryPanel summary={summary} />
+        <SummaryPanel
+          summary={summary}
+          headerAction={attentionCard ? <Link className="ghost patient-summary__attention-card" to={`/continuity/${attentionCard.card_id}`}>Go to attention queue card →</Link> : null}
+        />
         <div className="row">
           <button className="text-action" type="button" onClick={() => void copyId()} aria-live="polite">
             {copied ? 'Copied' : 'Copy patient ID'}
@@ -185,7 +192,7 @@ export function PatientPage() {
             summary={summary}
             symptoms={symptoms}
             outcomes={outcomes}
-            nextSteps={nextSteps}
+            nextSteps={[]}
             medications={meds}
             allergies={allergies}
             visits={visits}
@@ -197,6 +204,11 @@ export function PatientPage() {
         </div>
       </div>
 
+      <div className="patient-record__source-strip" aria-label="Patient record data sources">
+        <span><strong>FHIR chart data</strong> is shown throughout this record.</span>
+        <span><strong>{symptoms.filter((s) => s.status === 'active').length}</strong> active recorded symptom{symptoms.filter((s) => s.status === 'active').length === 1 ? '' : 's'}</span>
+      </div>
+
       {error ? <p style={{ color: 'var(--sc-high)' }}>{error}</p> : null}
 
       <div className="tabs" role="tablist">
@@ -205,7 +217,6 @@ export function PatientPage() {
             ['overview', 'Overview'],
             ['symptoms', 'Symptoms'],
             ['outcomes', 'Outcomes'],
-            ['next', 'Next steps'],
             ['more', 'More…'],
           ] as const
         ).map(([id, label]) => (
@@ -226,7 +237,6 @@ export function PatientPage() {
         <div className="stack">
           <VitalsPanel vitals={vitals} loading={detailsLoading.vitals} />
           <div className="panel row" style={{ justifyContent: 'space-between' }}>
-            {detailsLoading.nextSteps ? <span className="section-loading"><span className="inline-loader__spinner" aria-hidden="true" /> Loading next steps…</span> : <span>Open next steps: <strong>{nextSteps.filter((c) => !c.dismissed).length}</strong></span>}
             {detailsLoading.symptoms ? <span className="section-loading"><span className="inline-loader__spinner" aria-hidden="true" /> Loading symptoms…</span> : <span>Active symptoms: <strong>{symptoms.filter((s) => s.status === 'active').length}</strong></span>}
           </div>
         </div>
@@ -235,6 +245,7 @@ export function PatientPage() {
       {tab === 'symptoms' ? (detailsLoading.symptoms ? <LoadingPanel label="Loading reported symptoms…" /> : (
         <SymptomsPanel
           symptoms={symptoms}
+          fhirFindings={fhirFindings}
           onAdd={async (description, reported_by: SymptomReportedBy) => {
             const row = await addSymptom(patientId, { description, reported_by })
             setSymptoms((s) => [...s, row])
@@ -253,19 +264,6 @@ export function PatientPage() {
       )) : null}
 
       {tab === 'outcomes' ? (detailsLoading.outcomes ? <LoadingPanel label="Loading documented conditions…" /> : <DiagnosticOutcomesPanel outcomes={outcomes} />) : null}
-
-      {tab === 'next' ? (
-        detailsLoading.nextSteps ? <LoadingPanel label="Loading next steps…" /> : <NextStepsPanel
-          cards={nextSteps}
-          onDismiss={(id) => {
-            void dismissAdvisoryCard(patientId, id).then(() => {
-              setNextSteps((cards) =>
-                cards.map((c) => (c.card_id === id ? { ...c, dismissed: true } : c)),
-              )
-            })
-          }}
-        />
-      ) : null}
 
       {tab === 'more' ? (
         <div className="stack">

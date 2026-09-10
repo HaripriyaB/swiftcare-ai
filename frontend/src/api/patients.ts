@@ -9,6 +9,8 @@ import type {
   TimelineEvent,
   Visit,
   Vitals,
+  FhirClinicalFinding,
+  ContinuityCard,
 } from './types'
 
 export function searchPatients(q: string) {
@@ -23,6 +25,14 @@ export function getSummary(patientId: string) {
 
 export function getConditions(patientId: string) {
   return apiFetch<DiagnosticOutcome[]>(`/patients/${patientId}/conditions`)
+}
+
+export function getFhirFindings(patientId: string) {
+  return apiFetch<FhirClinicalFinding[]>(`/patients/${patientId}/fhir-findings`)
+}
+
+export function getPatientAttentionCard(patientId: string) {
+  return apiFetch<ContinuityCard | null>(`/patients/${patientId}/attention-card`)
 }
 
 export function getMedications(patientId: string) {
@@ -56,4 +66,11 @@ export function dismissAdvisoryCard(patientId: string, cardId: string) {
     `/patients/${patientId}/advisory-cards/${cardId}/dismiss`,
     { method: 'POST' },
   ).then((value) => { clearApiCache(`/patients/${patientId}`); return value })
+}
+
+export function generateNextSteps(patientId: string) {
+  return apiFetch<{ cards: AdvisoryCard[]; reply: string }>(
+    `/patients/${patientId}/generate-next-steps`,
+    { method: 'POST' },
+  ).then((value) => { clearApiCache(`/patients/${patientId}/advisory-cards`); return value })
 }

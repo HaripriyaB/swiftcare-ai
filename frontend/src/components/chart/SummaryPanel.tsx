@@ -1,7 +1,8 @@
 import type { PatientSummary } from '../../api/types'
+import type { ReactNode } from 'react'
 import { displayPatientName } from '../../utils/displayPatientName'
 
-export function SummaryPanel({ summary }: { summary: PatientSummary | null }) {
+export function SummaryPanel({ summary, headerAction }: { summary: PatientSummary | null; headerAction?: ReactNode }) {
   if (!summary) return <p className="empty">Nothing on file.</p>
   const name = displayPatientName(summary.display_first_name ?? summary.first_name, summary.display_last_name ?? summary.last_name)
   return (
@@ -14,6 +15,7 @@ export function SummaryPanel({ summary }: { summary: PatientSummary | null }) {
           Age {summary.age_years ?? '—'} · Last visit {summary.last_visit_date ?? '—'}
         </p>
       </div>
+      {headerAction}
     </div>
   )
 }

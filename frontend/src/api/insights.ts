@@ -15,12 +15,14 @@ export function listAtRisk(params?: {
   risk_flag?: string
   risk_level?: string
   limit?: number
+  offset?: number
 }) {
   const q = new URLSearchParams()
   if (params?.risk_flag) q.set('risk_flag', params.risk_flag)
   if (params?.risk_level) q.set('risk_level', params.risk_level)
   q.set('limit', String(Math.min(params?.limit ?? 10, 50)))
-  return apiFetch<{ patients: AtRiskPatient[]; count: number }>(
+  q.set('offset', String(Math.max(params?.offset ?? 0, 0)))
+  return apiFetch<{ patients: AtRiskPatient[]; count: number; offset: number; has_more: boolean }>(
     `/insights/at-risk?${q}`,
   )
 }

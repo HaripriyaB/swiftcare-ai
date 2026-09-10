@@ -52,22 +52,31 @@ def insights_at_risk(
     risk_flag: str | None = None,
     risk_level: str | None = None,
     limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, Any]:
     require_population_access(user)
     if local_demo.enabled():
         rows = local_demo.at_risk(
-            risk_flag=risk_flag, risk_level=risk_level, limit=limit
+            risk_flag=risk_flag, risk_level=risk_level, limit=limit + 1, offset=offset
         )
-        return {"patients": rows, "count": len(rows)}
+        return {
+            "patients": rows[:limit],
+            "count": min(len(rows), limit),
+            "offset": offset,
+            "has_more": len(rows) > limit,
+        }
     result = list_at_risk_patients(
-        risk_flag=risk_flag, risk_level=risk_level, limit=limit
+        risk_flag=risk_flag, risk_level=risk_level, limit=limit + 1, offset=offset
     )
     if result.get("error"):
         raise _err(400, "invalid_filter", str(result["error"]))
+    rows = result.get("patients", [])
     return {
-        "patients": result.get("patients", []),
-        "count": result.get("count", 0),
+        "patients": rows[:limit],
+        "count": min(len(rows), limit),
+        "offset": offset,
+        "has_more": len(rows) > limit,
     }
 
 

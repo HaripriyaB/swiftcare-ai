@@ -27,6 +27,32 @@ const SIGNAL_COPY: Record<string, Pick<CareSignal, 'title' | 'description'>> = {
   },
 }
 
+const TREND_SHAPES = [
+  [0.3, 0.5, 0.25, 0.76, 0.52, 1],
+  [0.5, 0.28, 0.65, 0.38, 0.78, 0.58],
+  [0.25, 0.7, 0.46, 0.92, 0.7, 1],
+  [0.4, 0.25, 0.7, 0.5, 0.95, 0.72],
+]
+
+function metricTrend(value: number, tone: number) {
+  const xs = [2, 15, 28, 41, 54, 70]
+  if (value <= 0) return { points: xs.map((x) => `${x},21`).join(' '), lastY: 21 }
+  const amplitude = Math.min(13, 3.5 + Math.log10(value + 1) * 2.7)
+  const points = TREND_SHAPES[tone].map((shape, index) => `${xs[index]},${(23 - shape * amplitude).toFixed(1)}`)
+  return { points: points.join(' '), lastY: 23 - TREND_SHAPES[tone][5] * amplitude }
+}
+
+function MetricTrend({ tone, value }: { tone: number; value: number }) {
+  const trend = metricTrend(value, tone)
+  return (
+    <svg className={`care-signals__trend tone-${tone}`} viewBox="0 0 72 30" aria-hidden="true" focusable="false">
+      <path d="M2 27H70" className="care-signals__trend-baseline" />
+      <polyline points={trend.points} className="care-signals__trend-line" />
+      <circle cx="70" cy={trend.lastY} r="2.5" className="care-signals__trend-dot" />
+    </svg>
+  )
+}
+
 export function buildCareSignals(rows: RiskDistributionRow[]): CareSignal[] {
   return Object.entries(SIGNAL_COPY).map(([flag, copy]) => {
     const matching = rows.filter((row) => row.risk_flag === flag)
@@ -64,20 +90,20 @@ export function CareSignalsDashboard({
     <>
       <section className="care-signals__metrics" aria-label="Care dashboard summary">
         <div className="care-signals__metric">
-          <strong>{affectedCount}</strong>
-          <span>Affected patient records</span>
+          <div><strong>{affectedCount}</strong><span>Affected patient records</span></div>
+          <MetricTrend tone={0} value={affectedCount} />
         </div>
         <div className="care-signals__metric attention">
-          <strong>{highCount}</strong>
-          <span>Higher-priority patterns</span>
+          <div><strong>{highCount}</strong><span>Higher-priority patterns</span></div>
+          <MetricTrend tone={1} value={highCount} />
         </div>
         <div className="care-signals__metric info">
-          <strong>{openAlertCount}</strong>
-          <span>New signals to acknowledge</span>
+          <div><strong>{openAlertCount}</strong><span>New signals to acknowledge</span></div>
+          <MetricTrend tone={2} value={openAlertCount} />
         </div>
         <div className="care-signals__metric success">
-          <strong>{completedToday}</strong>
-          <span>Outcomes recorded today</span>
+          <div><strong>{completedToday}</strong><span>Outcomes recorded today</span></div>
+          <MetricTrend tone={3} value={completedToday} />
         </div>
       </section>
 

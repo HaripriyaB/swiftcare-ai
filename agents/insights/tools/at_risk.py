@@ -20,6 +20,7 @@ def list_at_risk_patients(
     risk_flag: str | None = None,
     risk_level: str | None = None,
     limit: int | None = None,
+    offset: int = 0,
 ) -> dict[str, Any]:
     """Population scan of at-risk patients from mv_at_risk_patients.
 
@@ -28,6 +29,7 @@ def list_at_risk_patients(
             chronic_burden.
         risk_level: Optional filter — HIGH, MEDIUM, LOW.
         limit: Max rows (default DEFAULT_AT_RISK_LIMIT, hard-capped).
+        offset: Number of matching rows to skip for pagination.
 
     Returns:
         Dict with patients list, count, and applied filters.
@@ -36,6 +38,7 @@ def list_at_risk_patients(
     effective_limit = max_limit if limit is None else min(int(limit), max_limit)
     if effective_limit < 1:
         effective_limit = 1
+    effective_offset = max(0, int(offset))
 
     flag = (risk_flag or "").strip() or None
     if flag is not None and flag not in _RISK_FLAGS:
@@ -70,6 +73,7 @@ ORDER BY
   CASE risk_level WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
   days_since_last_visit DESC
 LIMIT @limit
+OFFSET @offset
 """
     rows, row_count, latency_ms = run_query(
         sql,
@@ -77,6 +81,7 @@ LIMIT @limit
             "risk_flag": flag,
             "risk_level": level,
             "limit": effective_limit,
+            "offset": effective_offset,
         },
     )
     patients = [with_display_names(r) for r in rows]
@@ -91,6 +96,7 @@ LIMIT @limit
         "patients": patients,
         "count": row_count,
         "limit": effective_limit,
+        "offset": effective_offset,
         "risk_flag": flag,
         "risk_level": level,
         "source": "swiftcare_agent_cache.mv_at_risk_patients",

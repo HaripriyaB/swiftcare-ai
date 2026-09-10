@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { InsightAlert } from '../api/types'
 import { PLAIN_RISK_LABELS } from '../api/types'
 
@@ -46,8 +46,14 @@ export function InsightAlertStrip({
   title?: string
 }) {
   const open = alerts.filter((a) => !a.dismissed)
-  const [showAll, setShowAll] = useState(false)
-  const shown = showAll ? open : open.slice(0, 3)
+  const pageSize = 4
+  const totalPages = Math.max(1, Math.ceil(open.length / pageSize))
+  const [page, setPage] = useState(0)
+  const shown = open.slice(page * pageSize, (page + 1) * pageSize)
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages - 1))
+  }, [totalPages])
 
   return (
     <section className="panel stack">
@@ -55,15 +61,17 @@ export function InsightAlertStrip({
       {!shown.length ? (
         <p className="empty">No new signals to acknowledge.</p>
       ) : (
-        shown.map((a) => (
-          <InsightAlertRow key={a.alert_id} alert={a} onDismiss={onDismiss} />
-        ))
+        <div className="insight-alert__scroll" tabIndex={0} aria-label="Operational signals">
+          {shown.map((a) => (
+            <InsightAlertRow key={a.alert_id} alert={a} onDismiss={onDismiss} />
+          ))}
+        </div>
       )}
-      {open.length > 3 && !showAll ? (
-        <button type="button" className="ghost" onClick={() => setShowAll(true)}>
-          Show more
-        </button>
-      ) : null}
+      {totalPages > 1 ? <nav className="queue-pagination insight-alert__pagination" aria-label="Operational signal pages">
+        <button type="button" className="ghost" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>Previous</button>
+        <span>Page {page + 1} of {totalPages}</span>
+        <button type="button" className="ghost" disabled={page === totalPages - 1} onClick={() => setPage((current) => current + 1)}>Next</button>
+      </nav> : null}
     </section>
   )
 }

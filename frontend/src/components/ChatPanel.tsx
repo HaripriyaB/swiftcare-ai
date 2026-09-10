@@ -196,14 +196,14 @@ export function ChatPanel({
           onClick={() => onExpandedChange?.(!expanded)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            {expanded ? <path d="m14 7-5 5 5 5" /> : <path d="m10 7 5 5-5 5" />}
+            {expanded ? <path d="m10 7 5 5-5 5" /> : <path d="m14 7-5 5 5 5" />}
           </svg>
         </button>
       </div>
-      <div className="swify-rail__expand-label">Open assistant</div>
+      <div className="swify-rail__expand-label">Swify · AI</div>
       <div className="swify-rail__collapsed-notice" role="status">
-        <strong>Swify is ready</strong>
-        <span>Expand for help with patients and today’s work.</span>
+        <strong>Hi, I’m Swify</strong>
+        <span>Your operations assistant. Expand for patient and workflow help.</span>
       </div>
       <div className="swify-rail__panel-content">
       <div className="swify-rail__modes" role="tablist" aria-label="Swify modes">
