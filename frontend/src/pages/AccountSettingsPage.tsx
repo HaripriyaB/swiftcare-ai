@@ -25,7 +25,7 @@ export function AccountSettingsPage() {
   return <section className="account-settings stack">
     <div><p className="eyebrow">Account</p><h1>Account settings</h1><p className="muted">Manage the SwiftCare sign-in for {user?.email}.</p></div>
     <div className="panel stack"><h2>Password</h2><p className="muted">For email/password accounts, we will send a secure password-reset link to your inbox.</p><div><button className="primary" type="button" onClick={() => void resetPassword()} disabled={busy || bypass}>{busy ? 'Sending…' : 'Send password-reset link'}</button></div></div>
-    <div className="panel account-settings__danger stack"><h2>Delete account</h2><p className="muted">This removes your Firebase sign-in account. It does not delete synthetic operational audit records.</p><div><button type="button" className="danger" onClick={() => void removeAccount()} disabled={busy || bypass}>Delete my account</button></div></div>
+    <div className="panel account-settings__danger stack"><h2>Delete account</h2><p className="muted">This removes your Firebase sign-in account. It does not delete operational audit records.</p><div><button type="button" className="danger" onClick={() => void removeAccount()} disabled={busy || bypass}>Delete my account</button></div></div>
     {message ? <div className="panel account-settings__success">{message}</div> : null}
     {error ? <div className="panel continuity-page__error">{error}</div> : null}
   </section>

@@ -47,7 +47,7 @@ def _hydrate(row: dict[str, Any]) -> dict[str, Any]:
         row["evidence"] = json.loads(evidence)
     except (TypeError, json.JSONDecodeError):
         row["evidence"] = []
-    row["disclaimer"] = "Operational support only — staff review required."
+    row["disclaimer"] = "Staff review required."
     return row
 
 

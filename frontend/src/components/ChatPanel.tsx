@@ -248,7 +248,7 @@ export function ChatPanel({
               </button>
             </div>
       </form>
-      <p className="swify-rail__disclaimer">Operational support only. Swify does not diagnose or prescribe.</p>
+      <p className="swify-rail__disclaimer">Swify does not diagnose or prescribe.</p>
       </div>
     </aside>
   )

@@ -81,7 +81,6 @@ export function LoginPage() {
               </li>
             ))}
           </ul>
-          <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>Synthetic demo data · Operational support only</p>
         </section>
 
         <div className="panel stack login-page__form" style={{ width: 'min(400px, 100%)' }}>

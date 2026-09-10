@@ -489,7 +489,7 @@ def _local_demo_reply(message: str, patient_id: str | None) -> dict[str, Any]:
             risk_flag="gap_in_care", risk_level=None, limit=10
         )
         return {
-            "reply": "Care-gap patients from the synthetic local fixture. These are operational scheduling flags, not diagnoses.",
+            "reply": "Care-gap patients from the local fixture. These are operational scheduling flags, not diagnoses.",
             "agent_type": "insights",
             "patient_id": None,
             "citations": [{"view": "mv_at_risk_patients"}],
@@ -520,7 +520,7 @@ def _local_demo_reply(message: str, patient_id: str | None) -> dict[str, Any]:
         return _local_response(reply, patient_id, "retrieval", "v_active_medications")
 
     return _local_response(
-        "Try asking about care gaps, medications, or vitals. The local API is serving synthetic fixture data.",
+        "Try asking about care gaps, medications, or vitals. The local API is serving fixture data.",
         patient_id,
         "orchestrator",
         None,
